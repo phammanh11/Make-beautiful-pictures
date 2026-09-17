@@ -1,4 +1,4 @@
-import os
+﻿import os
 import sys
 import time
 import uuid
@@ -7,6 +7,8 @@ import subprocess
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 from PIL import Image, ImageFilter, ImageOps
+import cv2
+import numpy as np
 
 from config import (
     ENGINE_EXE,
@@ -16,11 +18,13 @@ from config import (
     MODELS,
     RESOLUTION_PRESETS
 )
+from face_enhancer import FaceRestorer
 
 class UpscaleProcessor:
     def __init__(self):
         self.engine_path = ENGINE_EXE
         self.models_dir = MODELS_DIR
+        self.face_restorer = FaceRestorer(MODELS_DIR)
 
     def get_image_info(self, file_path: Path) -> Dict[str, Any]:
         with Image.open(file_path) as img:
@@ -119,6 +123,10 @@ class UpscaleProcessor:
         tile_size: int = 100,
         gpu_id: int = 0,
         enhance_sharpness: bool = True,
+        sharpen_percent: int = 120,
+        detail_blend: float = 0.40,
+        enhance_face: bool = True,
+        face_strength: float = 0.85,
         output_format: str = "png"
     ) -> Dict[str, Any]:
         start_time = time.time()
@@ -126,9 +134,11 @@ class UpscaleProcessor:
         if not input_path.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
             
-        # Ensure safe tile size for Intel Iris Xe integrated GPU
-        if tile_size <= 0 or tile_size > 150:
+        # Ensure safe tile size
+        if tile_size <= 0:
             tile_size = 100
+        elif tile_size > 500:
+            tile_size = 400
         
         orig_info = self.get_image_info(input_path)
         orig_w, orig_h = orig_info["width"], orig_info["height"]
@@ -154,7 +164,6 @@ class UpscaleProcessor:
         raw_ai_output_abs = raw_ai_output.resolve()
         models_dir_abs = self.models_dir.resolve()
 
-        # Command to run Real-ESRGAN Vulkan
         cmd = [
             str(self.engine_path.resolve()),
             "-i", str(input_abs),
@@ -178,7 +187,6 @@ class UpscaleProcessor:
                 check=True
             )
         except subprocess.CalledProcessError as e:
-            # Fallback to CPU (-g -1) if GPU failed
             print(f"[AI Upscaler] GPU run error ({e.stderr}). Falling back to CPU mode...")
             cmd[-1] = "-1"
             res = subprocess.run(
@@ -192,40 +200,51 @@ class UpscaleProcessor:
         if not raw_ai_output.exists():
             raise RuntimeError("Real-ESRGAN failed to produce output image.")
 
-        # Post-Processing: Resampling & Sharpness Enhancement
+        # Post-Processing: Resampling & Deep Face Restoration
+        faces_restored_count = 0
         with Image.open(raw_ai_output) as ai_img:
-            # Fix orientation if needed
             ai_img = ImageOps.exif_transpose(ai_img) or ai_img
             current_w, current_h = ai_img.size
 
-            # If target dimensions differ from raw AI output (e.g. 720p -> 1080p, Lanczos super-sampling)
+            # Lanczos super-sampling to exact target dimensions
             if (current_w, current_h) != (target_w, target_h):
                 final_img = ai_img.resize((target_w, target_h), Image.Resampling.LANCZOS)
             else:
                 final_img = ai_img.copy()
 
-            # Apply subject & landscape aware sharpness enhancement
-            if enhance_sharpness:
-                # 1. Unsharp mask for global edge crispness
-                final_img = final_img.filter(
-                    ImageFilter.UnsharpMask(radius=1.2, percent=120, threshold=2)
-                )
-                # 2. For real photos and human portraits: apply micro-detail enhancement for hair, eyes, clothes and landscape
-                if "anime" not in model_name:
-                    detail_img = final_img.filter(ImageFilter.DETAIL)
-                    final_img = Image.blend(final_img, detail_img, 0.40)
+            # Deep Face Restoration (GFPGAN + YuNet)
+            if enhance_face and "anime" not in model_name and self.face_restorer.is_ready:
+                try:
+                    rgb_arr = np.array(final_img.convert("RGB"))
+                    bgr_arr = cv2.cvtColor(rgb_arr, cv2.COLOR_RGB2BGR)
+                    enhanced_bgr, faces_restored_count = self.face_restorer.enhance_image(
+                        bgr_arr, face_strength=float(face_strength)
+                    )
+                    if faces_restored_count > 0:
+                        print(f"[AI Upscaler] Successfully restored {faces_restored_count} face(s) via GFPGAN!")
+                        enhanced_rgb = cv2.cvtColor(enhanced_bgr, cv2.COLOR_BGR2RGB)
+                        final_img = Image.fromarray(enhanced_rgb)
+                except Exception as e:
+                    print(f"[AI Upscaler] Face restoration warning: {e}")
 
+            # Apply configurable sharpness enhancement
+            if enhance_sharpness and sharpen_percent > 0:
+                final_img = final_img.filter(
+                    ImageFilter.UnsharpMask(radius=1.2, percent=int(sharpen_percent), threshold=2)
+                )
+                if "anime" not in model_name and detail_blend > 0:
+                    detail_img = final_img.filter(ImageFilter.DETAIL)
+                    final_img = Image.blend(final_img, detail_img, min(1.0, max(0.0, float(detail_blend))))
 
             # Export in desired format
             out_fmt = output_format.upper()
-            if out_fmt == "JPG" or out_fmt == "JPEG":
+            if out_fmt in ("JPG", "JPEG"):
                 if final_img.mode in ("RGBA", "P"):
                     final_img = final_img.convert("RGB")
                 final_img.save(final_output_path, format="JPEG", quality=98, subsampling=0)
             elif out_fmt == "WEBP":
                 final_img.save(final_output_path, format="WEBP", quality=95, method=6)
             else:
-                # Default PNG lossless
                 final_img.save(final_output_path, format="PNG", compress_level=3)
 
         # Cleanup raw AI temp file
@@ -247,6 +266,14 @@ class UpscaleProcessor:
             "preset_used": preset,
             "effective_scale": effective_scale,
             "elapsed_seconds": elapsed,
+            "faces_restored": faces_restored_count,
+            "pro_settings": {
+                "sharpen_percent": sharpen_percent,
+                "detail_blend": detail_blend,
+                "enhance_face": enhance_face,
+                "face_strength": face_strength,
+                "tile_size": tile_size
+            },
             "download_url": f"/outputs/{final_filename}",
             "original_url": f"/uploads/{input_path.name}"
         }

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { 
   CheckCircle, 
   Clock, 
@@ -7,13 +7,14 @@ import {
   Sparkles, 
   Download, 
   ArrowRight,
-  Cpu
+  Cpu,
+  UserCheck
 } from 'lucide-react';
 
 export default function MetricsHUD({ result, onDownload }) {
   if (!result) return null;
 
-  const { input, output, elapsed_seconds, effective_scale, model_used, preset_used } = result;
+  const { input, output, elapsed_seconds, effective_scale, model_used, preset_used, faces_restored } = result;
   const mpIncrease = input.megapixels > 0 
     ? Math.round(((output.megapixels - input.megapixels) / input.megapixels) * 100)
     : 0;
@@ -32,7 +33,7 @@ export default function MetricsHUD({ result, onDownload }) {
         background: 'linear-gradient(180deg, rgba(0, 242, 254, 0.04) 0%, rgba(18, 24, 38, 0.9) 100%)'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CheckCircle size={16} />
@@ -42,12 +43,31 @@ export default function MetricsHUD({ result, onDownload }) {
           </h4>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {faces_restored > 0 && (
+            <span 
+              className="badge-tag" 
+              style={{ 
+                background: 'linear-gradient(135deg, rgba(121, 40, 202, 0.3), rgba(0, 242, 254, 0.3))',
+                border: '1px solid var(--accent-cyan)',
+                color: '#fff',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                padding: '4px 10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <UserCheck size={13} color="#00f2fe" />
+              Đã phục hồi {faces_restored} khuôn mặt (GFPGAN AI)
+            </span>
+          )}
           <span className="badge-tag badge-emerald font-mono">
             <Clock size={12} /> {elapsed_seconds}s
           </span>
           <span className="badge-tag badge-cyan font-mono">
-            <Cpu size={12} /> GPU Accelerated
+            <Cpu size={12} /> GPU Intel Iris Xe Active
           </span>
         </div>
       </div>

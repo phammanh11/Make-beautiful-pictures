@@ -12,7 +12,10 @@ import {
   RotateCcw,
   Check,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  UserCheck,
+  SlidersHorizontal,
+  Smile
 } from 'lucide-react';
 
 export default function SettingsPanel({
@@ -27,6 +30,9 @@ export default function SettingsPanel({
   isScanningImage = false,
   detectionResult = null
 }) {
+  const [showManual, setShowManual] = useState(false);
+  const [showProTuning, setShowProTuning] = useState(false);
+
   const presets = [
     { id: '1080p', name: 'Full HD 1080p', desc: '1920 × 1080 (Tiêu chuẩn nét)', badge: 'Phổ biến' },
     { id: '2k', name: '2K QHD', desc: '2560 × 1440 (Màn hình 2K)', badge: null },
@@ -57,7 +63,6 @@ export default function SettingsPanel({
     }
   ];
 
-  // Calculate estimated output dimensions
   const getEstimatedOutput = () => {
     if (!currentImage) return 'Chưa chọn ảnh';
     const { width, height } = currentImage;
@@ -87,9 +92,6 @@ export default function SettingsPanel({
     return `${width * 4} × ${height * 4} px`;
   };
 
-  const [showManual, setShowManual] = useState(false);
-  const isModelMatchingAuto = detectionResult && settings.model === detectionResult.recommended_model;
-
   return (
     <div 
       className="glass-panel"
@@ -102,7 +104,7 @@ export default function SettingsPanel({
         width: '100%'
       }}
     >
-      {/* Target Resolution Section */}
+      {/* 1. Target Resolution */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -151,7 +153,7 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      {/* 2. Model Selection - TỰ ĐỘNG 100% (ẨN LỰA CHỌN THỦ CÔNG) */}
+      {/* 2. Model Selection */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -165,7 +167,6 @@ export default function SettingsPanel({
           </span>
         </div>
 
-        {/* Smart Auto-Detect Status Card */}
         <div
           style={{
             background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.12) 0%, rgba(121, 40, 202, 0.12) 100%)',
@@ -199,7 +200,6 @@ export default function SettingsPanel({
             </span>
           </div>
 
-          {/* Dynamic Detection State */}
           {isScanningImage ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 0', color: 'var(--accent-cyan)', fontSize: '0.8rem' }}>
               <Scan size={16} className="pulse-dot" />
@@ -219,7 +219,6 @@ export default function SettingsPanel({
                 {detectionResult.reason}
               </p>
 
-              {/* Tags / Badges for Human, Scenery, QR */}
               {detectionResult.tags && detectionResult.tags.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '4px 0' }}>
                   {detectionResult.tags.map((tag, idx) => (
@@ -274,11 +273,10 @@ export default function SettingsPanel({
             </div>
           ) : (
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-              Khi bạn tải ảnh lên, AI sẽ tự động phân tích và kích hoạt mô hình Real-ESRGAN phù hợp nhất (Anime hoặc Ảnh chụp đời sống), bạn không cần phải chọn thủ công.
+              Khi bạn tải ảnh lên, AI sẽ tự động phân tích và kích hoạt mô hình Real-ESRGAN phù hợp nhất, không cần chọn thủ công.
             </p>
           )}
 
-          {/* Collapsible Manual Override (Hidden by default) */}
           <div style={{ paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', marginTop: '2px' }}>
             <button
               type="button"
@@ -356,19 +354,111 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      {/* Advanced Enhancements */}
+      {/* 3. Tinh Chỉnh Nâng Cao & Pro Controls */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          3. Tinh chỉnh nâng cao
-        </label>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            3. Tinh chỉnh & Xuất file
+          </label>
+          <button
+            type="button"
+            onClick={() => setShowProTuning(!showProTuning)}
+            style={{
+              background: showProTuning ? 'rgba(0, 242, 254, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${showProTuning ? 'var(--accent-cyan)' : 'var(--border-subtle)'}`,
+              color: showProTuning ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+              borderRadius: '6px',
+              padding: '3px 8px',
+              fontSize: '0.72rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontWeight: 600
+            }}
+          >
+            <SlidersHorizontal size={12} />
+            <span>{showProTuning ? 'Thu gọn Pro Controls' : 'Mở Pro Controls'}</span>
+          </button>
+        </div>
 
+        {/* AI Face Restoration Feature Card (Always visible prominently) */}
+        <div
+          style={{
+            background: settings.enhance_face 
+              ? 'linear-gradient(135deg, rgba(121, 40, 202, 0.2) 0%, rgba(0, 242, 254, 0.15) 100%)' 
+              : 'rgba(0, 0, 0, 0.25)',
+            border: `1px solid ${settings.enhance_face ? 'rgba(0, 242, 254, 0.5)' : 'rgba(255, 255, 255, 0.08)'}`,
+            borderRadius: '12px',
+            padding: '12px 14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div 
+                style={{ 
+                  width: '24px', 
+                  height: '24px', 
+                  borderRadius: '50%', 
+                  background: settings.enhance_face ? 'linear-gradient(135deg, #00f2fe, #7928ca)' : 'rgba(255,255,255,0.1)',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <UserCheck size={14} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.84rem', fontWeight: 700, color: settings.enhance_face ? '#fff' : 'var(--text-secondary)' }}>
+                  Phục Hồi Khuôn Mặt AI (GFPGAN v1.4)
+                </span>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                  Tái tạo mắt, răng, biểu cảm & mịn da tự nhiên
+                </span>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={Boolean(settings.enhance_face)}
+              onChange={(e) => onUpdateSettings({ enhance_face: e.target.checked })}
+              style={{ width: '18px', height: '18px', accentColor: 'var(--accent-cyan)', cursor: 'pointer' }}
+            />
+          </div>
+
+          {settings.enhance_face && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Độ nét khuôn mặt (Face Strength):</span>
+                <span className="font-mono" style={{ color: 'var(--accent-cyan)', fontWeight: 700 }}>
+                  {Math.round((settings.face_strength ?? 0.85) * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="1.0"
+                step="0.05"
+                value={settings.face_strength ?? 0.85}
+                onChange={(e) => onUpdateSettings({ face_strength: parseFloat(e.target.value) })}
+                style={{ width: '100%', accentColor: 'var(--accent-cyan)', cursor: 'pointer' }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Basic Sharpening Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#fff' }}>
               Tăng cường vi chi tiết (Unsharp Mask)
             </span>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-              Tái tạo độ sâu vân tóc, mắt, đường viền sắc nét hơn
+              Làm rõ nét đường viền mắt, tóc và chất liệu
             </span>
           </div>
           <input
@@ -378,6 +468,86 @@ export default function SettingsPanel({
             style={{ width: '18px', height: '18px', accentColor: 'var(--accent-cyan)', cursor: 'pointer' }}
           />
         </div>
+
+        {/* PRO TUNING PANEL (Collapsible) */}
+        {showProTuning && (
+          <div
+            style={{
+              background: 'rgba(15, 23, 42, 0.65)',
+              border: '1px solid rgba(0, 242, 254, 0.25)',
+              borderRadius: '12px',
+              padding: '14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-cyan)', fontSize: '0.8rem', fontWeight: 700 }}>
+              <Sliders size={14} />
+              <span>BẢNG ĐIỀU CHỈNH CHUYÊN SÂU (PRO TUNING)</span>
+            </div>
+
+            {/* Sharpening Strength Slider */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Độ sắc nét AI (Sharpening):</span>
+                <span className="font-mono" style={{ color: '#00f2fe', fontWeight: 700 }}>
+                  {settings.sharpen_percent ?? 120}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="250"
+                step="10"
+                value={settings.sharpen_percent ?? 120}
+                onChange={(e) => onUpdateSettings({ sharpen_percent: parseInt(e.target.value) })}
+                style={{ width: '100%', accentColor: 'var(--accent-cyan)', cursor: 'pointer' }}
+              />
+            </div>
+
+            {/* Micro-detail Blending Slider */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Chi tiết vi mô (Detail Blend):</span>
+                <span className="font-mono" style={{ color: '#c084fc', fontWeight: 700 }}>
+                  {Math.round((settings.detail_blend ?? 0.40) * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={settings.detail_blend ?? 0.40}
+                onChange={(e) => onUpdateSettings({ detail_blend: parseFloat(e.target.value) })}
+                style={{ width: '100%', accentColor: '#c084fc', cursor: 'pointer' }}
+              />
+            </div>
+
+            {/* Tile Size Slider */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Kích thước khối (Tile Size):</span>
+                <span className="font-mono" style={{ color: '#34d399', fontWeight: 700 }}>
+                  {settings.tile_size ?? 100} px
+                </span>
+              </div>
+              <input
+                type="range"
+                min="100"
+                max="400"
+                step="50"
+                value={settings.tile_size ?? 100}
+                onChange={(e) => onUpdateSettings({ tile_size: parseInt(e.target.value) })}
+                style={{ width: '100%', accentColor: '#34d399', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
+                100px: Tối ưu cho Intel Iris Xe • 200–400px: Cho card đồ họa rời (Nvidia/AMD)
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Output Format */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }}>
@@ -409,7 +579,7 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      {/* Target Preview info box */}
+      {/* Target Preview Box */}
       {currentImage && (
         <div 
           style={{
@@ -472,9 +642,9 @@ export default function SettingsPanel({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span className="pulse-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></span>
-          <span>GPU: Intel Iris Xe (Vulkan Active)</span>
+          <span>GPU: Intel Iris Xe (Vulkan & DirectML)</span>
         </div>
-        <span className="font-mono">Tiling 100 (Anti-OOM)</span>
+        <span className="font-mono">Tiling {settings.tile_size ?? 100}px • GFPGAN Active</span>
       </div>
     </div>
   );

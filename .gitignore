@@ -22,3 +22,15 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Large AI Models (>100MB exceeds GitHub limit)
+backend/engine/models/GFPGANv1.4.onnx
+
+# SQLite Database & Local Session Data
+backend/history.db
+*.db
+*.sqlite3
+
+# Temporary Scripts
+check_urls.py
+

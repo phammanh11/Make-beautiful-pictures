@@ -6,14 +6,13 @@ echo    Hardware Acceleration: Intel Iris Xe via Vulkan
 echo ======================================================
 echo.
 
-:: Kiem tra neu port 8000 da duoc bat truoc do
-netstat -ano | findstr ":8000.*LISTENING" >nul
-if %ERRORLEVEL% equ 0 (
-    echo [Thong bao] Server da dang chay san tai cong 8000!
-    echo Dang mo trinh duyet toi http://127.0.0.1:8000 ...
-    start http://127.0.0.1:8000
-    goto :end
+:: Kiem tra va dong server cu tren cong 8000 neu co de chay code moi nhat
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8000.*LISTENING"') do (
+    echo [Cap nhat] Dang dong tien trinh cu (PID: %%a)...
+    taskkill /f /pid %%a >nul 2>&1
 )
+
+timeout /t 1 /nobreak >nul
 
 cd /d "%~dp0backend"
 echo [1/2] Khoi dong FastAPI Backend va AI Engine tai http://127.0.0.1:8000 ...

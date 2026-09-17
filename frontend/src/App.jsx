@@ -14,6 +14,7 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processResult, setProcessResult] = useState(null);
   const [history, setHistory] = useState([]);
+  const [storageInfo, setStorageInfo] = useState(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   
@@ -26,23 +27,31 @@ export default function App() {
     preset: '4k',
     model: 'realesrgan-x4plus',
     enhance_sharpness: true,
+    sharpen_percent: 120,
+    detail_blend: 0.40,
+    enhance_face: false,
+    face_strength: 0.85,
     output_format: 'png',
     tile_size: 100
   });
 
-  // Fetch system info and history on mount
+  const loadHistory = () => {
+    fetch('/api/history')
+      .then(res => res.json())
+      .then(data => {
+        if (data.history) setHistory(data.history);
+        if (data.storage) setStorageInfo(data.storage);
+      })
+      .catch(err => console.error('Failed to load history:', err));
+  };
+
   useEffect(() => {
     fetch('/api/system-info')
       .then(res => res.json())
       .then(data => setSystemInfo(data))
       .catch(err => console.error('Failed to load system info:', err));
 
-    fetch('/api/history')
-      .then(res => res.json())
-      .then(data => {
-        if (data.history) setHistory(data.history);
-      })
-      .catch(err => console.error('Failed to load history:', err));
+    loadHistory();
   }, []);
 
   const handleUpdateSettings = (newSettings) => {
@@ -68,8 +77,13 @@ export default function App() {
         const data = await res.json();
         if (data.success && data.detection) {
           setDetectionResult(data.detection);
-          // Tự động cập nhật mô hình tối ưu tương ứng
-          setSettings(prev => ({ ...prev, model: data.detection.recommended_model }));
+          // Tự động kích hoạt Face Enhancement nếu phát hiện có người
+          const hasHuman = data.detection.has_human || data.detection.detected_type.includes('portrait');
+          setSettings(prev => ({ 
+            ...prev, 
+            model: data.detection.recommended_model,
+            enhance_face: hasHuman ? true : prev.enhance_face
+          }));
         }
       } catch (err) {
         console.error('Lỗi khi tự động quét ảnh:', err);
@@ -103,9 +117,9 @@ export default function App() {
       img.src = imgUrl;
 
       if (type === 'anime') {
-        setSettings(prev => ({ ...prev, model: 'realesrgan-x4plus-anime' }));
+        setSettings(prev => ({ ...prev, model: 'realesrgan-x4plus-anime', enhance_face: false }));
       } else {
-        setSettings(prev => ({ ...prev, model: 'realesrgan-x4plus' }));
+        setSettings(prev => ({ ...prev, model: 'realesrgan-x4plus', enhance_face: true }));
       }
     } catch (e) {
       console.error('Demo load error', e);
@@ -122,8 +136,12 @@ export default function App() {
     formData.append('file', currentImage.file);
     formData.append('model', settings.model);
     formData.append('preset', settings.preset);
-    formData.append('tile_size', settings.tile_size);
+    formData.append('tile_size', settings.tile_size ?? 100);
     formData.append('enhance_sharpness', settings.enhance_sharpness);
+    formData.append('sharpen_percent', settings.sharpen_percent ?? 120);
+    formData.append('detail_blend', settings.detail_blend ?? 0.40);
+    formData.append('enhance_face', settings.enhance_face ?? false);
+    formData.append('face_strength', settings.face_strength ?? 0.85);
     formData.append('output_format', settings.output_format);
     formData.append('gpu_id', 0);
 
@@ -139,7 +157,7 @@ export default function App() {
       }
 
       setProcessResult(data.data);
-      setHistory(prev => [data.data, ...prev]);
+      loadHistory();
     } catch (err) {
       console.error('Upscale error:', err);
       setErrorMsg(err.message || 'Đã xảy ra lỗi khi kết nối tới AI Engine.');
@@ -152,11 +170,41 @@ export default function App() {
     setProcessResult(item);
     setCurrentImage({
       previewUrl: item.original_url,
-      width: item.input.width,
-      height: item.input.height,
-      sizeHuman: item.input.size_human,
+      width: item.input?.width,
+      height: item.input?.height,
+      sizeHuman: item.input?.size_human,
       name: item.filename
     });
+  };
+
+  const handleDeleteHistoryItem = async (jobId) => {
+    try {
+      const res = await fetch(`/api/history/${jobId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setHistory(prev => prev.filter(item => item.job_id !== jobId));
+        if (processResult && processResult.job_id === jobId) {
+          setProcessResult(null);
+        }
+        loadHistory();
+      }
+    } catch (e) {
+      console.error('Delete history error:', e);
+    }
+  };
+
+  const handleClearAllHistory = async () => {
+    try {
+      const res = await fetch('/api/history', { method: 'DELETE' });
+      if (res.ok) {
+        setHistory([]);
+        if (processResult) {
+          setProcessResult(null);
+        }
+        loadHistory();
+      }
+    } catch (e) {
+      console.error('Clear history error:', e);
+    }
   };
 
   return (
@@ -347,7 +395,11 @@ export default function App() {
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         history={history}
+        storageInfo={storageInfo}
         onLoadItem={handleLoadHistoryItem}
+        onDeleteItem={handleDeleteHistoryItem}
+        onClearAll={handleClearAllHistory}
+        onSyncHistory={loadHistory}
       />
     </div>
   );
