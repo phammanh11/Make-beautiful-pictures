@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React, { useState } from 'react';
 import { 
   CheckCircle, 
   Clock, 
@@ -6,13 +6,30 @@ import {
   Maximize, 
   Sparkles, 
   Download, 
-  ArrowRight,
-  Cpu,
-  UserCheck
+  ArrowRight, 
+  Cpu, 
+  UserCheck,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export default function MetricsHUD({ result, onDownload }) {
+  const [copied, setCopied] = useState(false);
   if (!result) return null;
+
+  const handleCopy = async () => {
+    try {
+      const res = await fetch(result.download_url);
+      const blob = await res.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error('Copy error:', e);
+    }
+  };
 
   const { input, output, elapsed_seconds, effective_scale, model_used, preset_used, faces_restored } = result;
   const mpIncrease = input.megapixels > 0 
@@ -135,8 +152,30 @@ export default function MetricsHUD({ result, onDownload }) {
         </div>
       </div>
 
-      {/* Download Action Bar */}
+      {/* Download & Copy Action Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', paddingTop: '6px' }}>
+        <button
+          type="button"
+          onClick={handleCopy}
+          style={{
+            background: copied ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+            border: `1px solid ${copied ? 'var(--accent-emerald)' : 'rgba(255, 255, 255, 0.15)'}`,
+            color: copied ? '#34d399' : '#fff',
+            padding: '10px 20px',
+            borderRadius: '10px',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {copied ? <Check size={16} /> : <Copy size={16} />}
+          <span>{copied ? 'Đã sao chép vào Clipboard!' : 'Sao chép ảnh (Clipboard)'}</span>
+        </button>
+
         <a
           href={result.download_url}
           download={result.filename}

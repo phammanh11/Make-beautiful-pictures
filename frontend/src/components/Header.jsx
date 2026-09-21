@@ -1,7 +1,13 @@
 import React from 'react';
 import { Sparkles, Cpu, Layers, History, HelpCircle } from 'lucide-react';
 
-export default function Header({ systemInfo, onToggleHistory, historyCount }) {
+export default function Header({ 
+  systemInfo, 
+  onToggleHistory, 
+  historyCount, 
+  currentMode = 'single', 
+  onChangeMode 
+}) {
   return (
     <header
       className="glass-panel"
@@ -13,7 +19,9 @@ export default function Header({ systemInfo, onToggleHistory, historyCount }) {
         borderRadius: '16px',
         width: '100%',
         marginBottom: '24px',
-        border: '1px solid var(--border-subtle)'
+        border: '1px solid var(--border-subtle)',
+        flexWrap: 'wrap',
+        gap: '16px'
       }}
     >
       {/* Brand */}
@@ -40,7 +48,7 @@ export default function Header({ systemInfo, onToggleHistory, historyCount }) {
               Tạo Ảnh <span style={{ color: 'var(--accent-cyan)' }}>Đẹp</span>
             </h1>
             <span 
-              className="badge-tag badge-cyan font-mono"
+              className="badge-tag badge-cyan font-mono" 
               style={{ fontSize: '0.68rem', padding: '2px 8px' }}
             >
               AI STUDIO
@@ -51,6 +59,64 @@ export default function Header({ systemInfo, onToggleHistory, historyCount }) {
           </p>
         </div>
       </div>
+
+      {/* Mode Switcher Tabs */}
+      {onChangeMode && (
+        <div 
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            background: 'rgba(0, 0, 0, 0.45)',
+            padding: '4px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.08)'
+          }}
+        >
+          <button
+            onClick={() => onChangeMode('single')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              background: currentMode === 'single' ? 'linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(121, 40, 202, 0.2))' : 'transparent',
+              color: currentMode === 'single' ? '#00f2fe' : 'var(--text-muted)',
+              fontSize: '0.8rem',
+              fontWeight: currentMode === 'single' ? 700 : 500,
+              cursor: 'pointer',
+              boxShadow: currentMode === 'single' ? '0 0 12px rgba(0, 242, 254, 0.25)' : 'none',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Sparkles size={14} />
+            <span>Studio Đơn Ảnh</span>
+          </button>
+
+          <button
+            onClick={() => onChangeMode('batch')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              background: currentMode === 'batch' ? 'linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(121, 40, 202, 0.2))' : 'transparent',
+              color: currentMode === 'batch' ? '#00f2fe' : 'var(--text-muted)',
+              fontSize: '0.8rem',
+              fontWeight: currentMode === 'batch' ? 700 : 500,
+              cursor: 'pointer',
+              boxShadow: currentMode === 'batch' ? '0 0 12px rgba(0, 242, 254, 0.25)' : 'none',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Layers size={14} />
+            <span>Xử Lý Hàng Loạt (Batch)</span>
+          </button>
+        </div>
+      )}
 
       {/* Hardware Acceleration & Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>

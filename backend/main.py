@@ -2,6 +2,7 @@ import os
 import shutil
 import uuid
 import asyncio
+import threading
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
@@ -51,6 +52,19 @@ if FRONTEND_DIST.exists():
 
 processor = UpscaleProcessor()
 history_mgr = HistoryManager()
+
+@app.on_event("startup")
+def on_startup():
+    if os.environ.get("NO_BROWSER") != "1":
+        def _open():
+            import time
+            import webbrowser
+            time.sleep(0.8)
+            try:
+                webbrowser.open("http://127.0.0.1:8000")
+            except Exception as e:
+                print(f"[Browser Auto-Open] {e}")
+        threading.Thread(target=_open, daemon=True).start()
 
 @app.get("/api/health")
 def health_check():

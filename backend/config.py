@@ -64,9 +64,9 @@ RESOLUTION_PRESETS = {
         "description": "Độ phân giải cực đại cho in ấn và màn hình cỡ lớn"
     },
     "2x": {
-        "label": "Scale 2X Gốc",
+        "label": "Scale 2X Gốc (Siêu Nhanh)",
         "scale": 2,
-        "description": "Nhân đôi chiều dài và chiều rộng so với ảnh gốc"
+        "description": "Nhân đôi chiều dài & rộng, kích hoạt mô hình Native 2X siêu tốc"
     },
     "4x": {
         "label": "Scale 4X Gốc (Khuyên dùng)",

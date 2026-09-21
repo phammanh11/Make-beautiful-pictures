@@ -6,9 +6,12 @@ import BeforeAfterSlider from './components/BeforeAfterSlider';
 import MetricsHUD from './components/MetricsHUD';
 import ProcessProgress from './components/ProcessProgress';
 import HistoryDrawer from './components/HistoryDrawer';
-import { Sparkles, RefreshCw, Layers, CheckCircle } from 'lucide-react';
+import BatchProcessingView from './components/BatchProcessingView';
+import { Sparkles, RefreshCw, Layers, CheckCircle, ClipboardCheck } from 'lucide-react';
 
 export default function App() {
+  const [activeTab, setActiveTab] = useState('single'); // 'single' | 'batch'
+  const [pasteToast, setPasteToast] = useState(false);
   const [systemInfo, setSystemInfo] = useState(null);
   const [currentImage, setCurrentImage] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -53,6 +56,48 @@ export default function App() {
 
     loadHistory();
   }, []);
+
+  // Lắng nghe sự kiện Paste toàn cục (Ctrl + V)
+  useEffect(() => {
+    const handleGlobalPaste = (e) => {
+      // Don't intercept if user is typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (!e.clipboardData || !e.clipboardData.items) return;
+      for (let i = 0; i < e.clipboardData.items.length; i++) {
+        const item = e.clipboardData.items[i];
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const img = new Image();
+              img.onload = () => {
+                handleImageSelected({
+                  file: file,
+                  previewUrl: event.target.result,
+                  width: img.width,
+                  height: img.height,
+                  name: `Ảnh chụp dán Clipboard (${new Date().toLocaleTimeString()}).png`,
+                  size: file.size,
+                  sizeHuman: (file.size / 1024).toFixed(1) + ' KB'
+                });
+                setActiveTab('single');
+                setPasteToast(true);
+                setTimeout(() => setPasteToast(false), 3000);
+              };
+              img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [autoDetectEnabled]);
 
   const handleUpdateSettings = (newSettings) => {
     setSettings(prev => ({ ...prev, ...newSettings }));
@@ -214,7 +259,34 @@ export default function App() {
         systemInfo={systemInfo}
         onToggleHistory={() => setIsHistoryOpen(true)}
         historyCount={history.length}
+        currentMode={activeTab}
+        onChangeMode={setActiveTab}
       />
+
+      {/* Toast Clipboard Paste Notification */}
+      {pasteToast && (
+        <div
+          className="glass-panel"
+          style={{
+            background: 'rgba(16, 185, 129, 0.2)',
+            border: '1px solid var(--accent-emerald)',
+            color: '#34d399',
+            padding: '12px 20px',
+            borderRadius: '12px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.3)',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+        >
+          <ClipboardCheck size={18} />
+          <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>
+            Đã nhận diện và dán ảnh thành công từ Clipboard! Bạn có thể bắt đầu nâng cấp ngay.
+          </span>
+        </div>
+      )}
 
       {/* Error Alert */}
       {errorMsg && (
@@ -253,7 +325,16 @@ export default function App() {
       >
         {/* Left Column: Visual Stage */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {isProcessing ? (
+          {activeTab === 'batch' ? (
+            <BatchProcessingView
+              settings={settings}
+              onLoadSingleItem={(item) => {
+                handleLoadHistoryItem(item);
+                setActiveTab('single');
+              }}
+              onHistoryUpdated={loadHistory}
+            />
+          ) : isProcessing ? (
             <ProcessProgress
               preset={settings.preset}
               model={settings.model}

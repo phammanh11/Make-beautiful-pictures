@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import time
 import uuid
@@ -156,7 +156,12 @@ class UpscaleProcessor:
         ai_scale = 4
         if "animevideov3" in model_name:
             model_key = "realesr-animevideov3"
-            ai_scale = 4
+            if preset == "2x" or (custom_scale and abs(custom_scale - 2.0) < 0.1):
+                ai_scale = 2
+            elif preset == "3x" or (custom_scale and abs(custom_scale - 3.0) < 0.1):
+                ai_scale = 3
+            else:
+                ai_scale = 4
         else:
             model_key = model_name
 

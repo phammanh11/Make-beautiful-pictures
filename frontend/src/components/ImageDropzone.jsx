@@ -117,20 +117,40 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
           Hỗ trợ ảnh 480p, 720p, 1080p, ảnh mờ, vỡ hạt (JPG, PNG, WebP). Tự động khử nhiễu và tái tạo chi tiết 4K bằng AI.
         </p>
 
-        <button
-          type="button"
-          className="glow-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            fileInputRef.current?.click();
-          }}
-          style={{
-            padding: '10px 22px',
-            fontSize: '0.875rem'
-          }}
-        >
-          Chọn Ảnh Từ Máy Tính
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <button
+            type="button"
+            className="glow-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
+            style={{
+              padding: '10px 22px',
+              fontSize: '0.875rem'
+            }}
+          >
+            Chọn Ảnh Từ Máy Tính
+          </button>
+          
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.76rem',
+              color: 'var(--text-muted)',
+              background: 'rgba(255, 255, 255, 0.04)',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              border: '1px solid rgba(255, 255, 255, 0.08)'
+            }}
+          >
+            <span>💡 Mẹo: Nhấn</span>
+            <kbd style={{ background: 'rgba(0, 242, 254, 0.15)', color: 'var(--accent-cyan)', padding: '1px 5px', borderRadius: '4px', border: '1px solid rgba(0, 242, 254, 0.3)', fontFamily: 'monospace', fontWeight: 600 }}>Ctrl + V</kbd>
+            <span>để dán ảnh chụp màn hình / ảnh copy tức thì</span>
+          </div>
+        </div>
       </div>
 
       {/* Quick Demo Selector */}
