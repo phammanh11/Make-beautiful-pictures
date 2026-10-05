@@ -30,8 +30,10 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
   };
 
   const handleFiles = (file) => {
-    if (!file.type.startsWith('image/')) {
-      alert('Vui lòng chỉ chọn file hình ảnh (PNG, JPG, WEBP).');
+    const isImage = file.type.startsWith('image/') || 
+      /\.(jpg|jpeg|png|webp|heic|heif|tiff|tif|bmp|avif)$/i.test(file.name);
+    if (!isImage) {
+      alert('Vui lòng chỉ chọn file hình ảnh (PNG, JPG, WEBP, HEIC, TIFF).');
       return;
     }
 
@@ -45,6 +47,18 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
           previewUrl: e.target.result,
           width: img.width,
           height: img.height,
+          name: file.name,
+          size: file.size,
+          sizeHuman: formatBytes(file.size)
+        });
+      };
+      img.onerror = () => {
+        // Fallback for formats not natively rendered by browser (HEIC, TIFF)
+        onImageSelected({
+          file: file,
+          previewUrl: e.target.result,
+          width: 0,
+          height: 0,
           name: file.name,
           size: file.size,
           sizeHuman: formatBytes(file.size)
@@ -67,7 +81,7 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept="image/png, image/jpeg, image/webp"
+        accept="image/*, .heic, .heif, .tiff, .tif, .avif"
         style={{ display: 'none' }}
       />
 

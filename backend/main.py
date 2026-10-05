@@ -25,6 +25,37 @@ from bg_remover import remove_background
 from video_processor import VideoUpscaleProcessor
 from colorizer import PhotoColorizer
 
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
+
+# Quản lý tiến trình đang chạy để hỗ trợ Hủy Tác Vụ (Job Cancellation)
+ACTIVE_PROCESSES: Dict[str, Any] = {}
+CANCELLED_JOBS: set = set()
+
+def register_process(job_id: str, proc: Any):
+    ACTIVE_PROCESSES[job_id] = proc
+
+def unregister_process(job_id: str):
+    ACTIVE_PROCESSES.pop(job_id, None)
+
+def cancel_job_by_id(job_id: str) -> bool:
+    CANCELLED_JOBS.add(job_id)
+    proc = ACTIVE_PROCESSES.get(job_id)
+    if proc:
+        try:
+            proc.terminate()
+            proc.kill()
+        except Exception:
+            pass
+        return True
+    return False
+
+def is_job_cancelled(job_id: str) -> bool:
+    return job_id in CANCELLED_JOBS
+
 app = FastAPI(
     title="AI Super-Resolution & Media Studio API",
     description="High Performance AI Super-Resolution (Image & Video 4K/8K), Background Remover & Colorizer",
@@ -74,6 +105,20 @@ colorizer = PhotoColorizer()
 
 @app.on_event("startup")
 def on_startup():
+    # Tự động dọn dẹp các thư mục temp và file dở dang từ các lần chạy trước
+    try:
+        if OUTPUTS_DIR.exists():
+            for p in OUTPUTS_DIR.glob("temp_video_*"):
+                if p.is_dir():
+                    shutil.rmtree(p, ignore_errors=True)
+            for p in OUTPUTS_DIR.glob("raw_ai_*.png"):
+                p.unlink(missing_ok=True)
+        if UPLOADS_DIR.exists():
+            for p in UPLOADS_DIR.glob("temp_*"):
+                p.unlink(missing_ok=True)
+    except Exception as e:
+        print(f"[Startup Auto-Prune Warning] {e}")
+
     if os.environ.get("NO_BROWSER") != "1":
         def _open():
             import time
@@ -84,6 +129,11 @@ def on_startup():
             except Exception as e:
                 print(f"[Browser Auto-Open] {e}")
         threading.Thread(target=_open, daemon=True).start()
+
+@app.post("/api/jobs/{job_id}/cancel")
+def cancel_job_endpoint(job_id: str):
+    success = cancel_job_by_id(job_id)
+    return {"success": True, "job_id": job_id, "cancelled": success}
 
 @app.get("/api/health")
 def health_check():
@@ -250,6 +300,7 @@ async def upscale_image_stream(
     async def event_generator():
         queue: asyncio.Queue = asyncio.Queue()
         loop = asyncio.get_running_loop()
+        job_id = f"img_{uuid.uuid4().hex[:8]}"
 
         def progress_cb(percent: float, stage: str, message: str):
             loop.call_soon_threadsafe(queue.put_nowait, {
@@ -262,6 +313,10 @@ async def upscale_image_stream(
         def run_worker():
             nonlocal model
             try:
+                loop.call_soon_threadsafe(queue.put_nowait, {
+                    "type": "job_created",
+                    "job_id": job_id
+                })
                 progress_cb(2.0, "init", "Đang nhận diện đặc trưng ảnh...")
                 detection_info = None
                 if model == "auto" or model not in MODELS:
@@ -288,7 +343,9 @@ async def upscale_image_stream(
                     enable_clahe=enable_clahe,
                     enable_denoise=enable_denoise,
                     output_format=output_format,
-                    progress_callback=progress_cb
+                    progress_callback=progress_cb,
+                    on_proc_started=lambda p: register_process(job_id, p),
+                    cancel_checker=lambda: is_job_cancelled(job_id)
                 )
 
                 if detection_info:
@@ -300,12 +357,15 @@ async def upscale_image_stream(
                     "data": res
                 })
             except Exception as ex:
-                print(f"[Worker Exception] {ex}")
+                is_canc = is_job_cancelled(job_id)
+                print(f"[Worker Status] {'Cancelled' if is_canc else 'Exception'}: {ex}")
                 loop.call_soon_threadsafe(queue.put_nowait, {
-                    "type": "error",
-                    "error": str(ex)
+                    "type": "cancelled" if is_canc else "error",
+                    "error": "Tác vụ đã được hủy theo yêu cầu." if is_canc else str(ex)
                 })
             finally:
+                unregister_process(job_id)
+                CANCELLED_JOBS.discard(job_id)
                 loop.call_soon_threadsafe(queue.put_nowait, None)
 
         threading.Thread(target=run_worker, daemon=True).start()
@@ -510,6 +570,7 @@ async def video_upscale_stream(
     async def event_generator():
         queue: asyncio.Queue = asyncio.Queue()
         loop = asyncio.get_running_loop()
+        job_id = f"vid_{uuid.uuid4().hex[:8]}"
 
         def progress_cb(percent: float, stage: str, message: str):
             loop.call_soon_threadsafe(queue.put_nowait, {
@@ -521,6 +582,10 @@ async def video_upscale_stream(
 
         def run_worker():
             try:
+                loop.call_soon_threadsafe(queue.put_nowait, {
+                    "type": "job_created",
+                    "job_id": job_id
+                })
                 progress_cb(1.0, "init", "Bắt đầu tải video vào bộ nhớ xử lý...")
                 res = video_processor.process_video(
                     input_video_path=input_video_path,
@@ -528,19 +593,24 @@ async def video_upscale_stream(
                     model_name=model,
                     tile_size=tile_size,
                     gpu_id=gpu_id,
-                    progress_callback=progress_cb
+                    progress_callback=progress_cb,
+                    on_proc_started=lambda p: register_process(job_id, p),
+                    cancel_checker=lambda: is_job_cancelled(job_id)
                 )
                 loop.call_soon_threadsafe(queue.put_nowait, {
                     "type": "complete",
                     "data": res
                 })
             except Exception as ex:
-                print(f"[Video Worker Exception] {ex}")
+                is_canc = is_job_cancelled(job_id)
+                print(f"[Video Worker Status] {'Cancelled' if is_canc else 'Exception'}: {ex}")
                 loop.call_soon_threadsafe(queue.put_nowait, {
-                    "type": "error",
-                    "error": str(ex)
+                    "type": "cancelled" if is_canc else "error",
+                    "error": "Tác vụ video đã được hủy theo yêu cầu." if is_canc else str(ex)
                 })
             finally:
+                unregister_process(job_id)
+                CANCELLED_JOBS.discard(job_id)
                 loop.call_soon_threadsafe(queue.put_nowait, None)
 
         threading.Thread(target=run_worker, daemon=True).start()

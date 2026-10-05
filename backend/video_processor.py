@@ -64,9 +64,11 @@ class VideoUpscaleProcessor:
         input_video_path: Path,
         scale: int = 2,
         model_name: str = "realesr-animevideov3",
-        tile_size: int = 100,
+        tile_size: int = 200,
         gpu_id: int = 0,
-        progress_callback: Optional[Callable[[float, str, str], None]] = None
+        progress_callback: Optional[Callable[[float, str, str], None]] = None,
+        on_proc_started: Optional[Any] = None,
+        cancel_checker: Optional[Any] = None
     ) -> Dict[str, Any]:
         start_time = time.time()
         job_id = uuid.uuid4().hex[:8]
@@ -83,6 +85,9 @@ class VideoUpscaleProcessor:
         final_video_path = OUTPUTS_DIR / final_filename
 
         try:
+            if cancel_checker and cancel_checker():
+                raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+
             if progress_callback:
                 progress_callback(3.0, "init", "Đang phân tích thông số video...")
 
@@ -107,6 +112,9 @@ class VideoUpscaleProcessor:
             except Exception:
                 has_audio = False
 
+            if cancel_checker and cancel_checker():
+                raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+
             # 2. Tách frames từ video
             if progress_callback:
                 progress_callback(12.0, "extract", f"Đang tách {total_frames} khung hình video...")
@@ -123,7 +131,10 @@ class VideoUpscaleProcessor:
             if extracted_count == 0:
                 raise RuntimeError("Không thể trích xuất khung hình từ video.")
 
-            # 3. Siêu phân giải hàng loạt frame bằng Real-ESRGAN Vulkan NCNN
+            if cancel_checker and cancel_checker():
+                raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+
+            # 3. Siêu phân giải hàng loạt frame bằng Real-ESRGAN Vulkan NCNN (Dùng JPG tối ưu I/O)
             if progress_callback:
                 progress_callback(20.0, "ai_video", f"Đang siêu phân giải AI ({model_name} {scale}X) qua GPU Intel Iris Xe...")
 
@@ -134,9 +145,10 @@ class VideoUpscaleProcessor:
                 "-m", str(self.models_dir.resolve()),
                 "-n", model_name,
                 "-s", str(scale),
-                "-t", str(tile_size),
+                "-t", str(tile_size if tile_size > 0 else 200),
                 "-g", str(gpu_id),
-                "-f", "png"
+                "-j", "1:2:2",
+                "-f", "jpg"
             ]
 
             proc = subprocess.Popen(
@@ -148,9 +160,15 @@ class VideoUpscaleProcessor:
                 bufsize=1,
                 universal_newlines=True
             )
+            if on_proc_started:
+                on_proc_started(proc)
 
             pct_regex = re.compile(r"(\d+(\.\d+)?)%")
             for line in iter(proc.stderr.readline, ''):
+                if cancel_checker and cancel_checker():
+                    proc.terminate()
+                    proc.kill()
+                    raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
                 if not line:
                     break
                 m = pct_regex.search(line)
@@ -164,6 +182,11 @@ class VideoUpscaleProcessor:
                             f"Đang siêu phân giải frames AI GPU: {gpu_pct:.1f}% ({extracted_count} frames)"
                         )
             proc.wait()
+            if proc.returncode != 0:
+                raise RuntimeError(f"Vulkan NCNN engine exited with code {proc.returncode}")
+
+            if cancel_checker and cancel_checker():
+                raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
 
             # 4. Ghép lại khung hình thành Video MP4 chất lượng cao
             if progress_callback:
@@ -175,7 +198,7 @@ class VideoUpscaleProcessor:
             cmd_mux = [
                 self.ffmpeg_exe, "-y",
                 "-framerate", str(fps),
-                "-i", str((frames_out_dir / "frame_%06d.png").resolve())
+                "-i", str((frames_out_dir / "frame_%06d.jpg").resolve())
             ]
 
             if has_audio:

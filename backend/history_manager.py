@@ -21,12 +21,14 @@ class HistoryManager:
             print(f"[HistoryManager] Init sync warning: {e}")
 
     def _get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(self.db_path))
+        conn = sqlite3.connect(str(self.db_path), timeout=30.0)
         conn.row_factory = sqlite3.Row
         return conn
 
     def _init_db(self):
         with self._get_connection() as conn:
+            conn.execute("PRAGMA journal_mode = WAL;")
+            conn.execute("PRAGMA synchronous = NORMAL;")
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS history (
                     job_id TEXT PRIMARY KEY,

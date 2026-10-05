@@ -11,7 +11,8 @@ import {
   Film, 
   Zap, 
   Cpu, 
-  AlertCircle 
+  AlertCircle,
+  X
 } from 'lucide-react';
 
 export default function VideoStudioView() {
@@ -25,6 +26,7 @@ export default function VideoStudioView() {
   const [statusMessage, setStatusMessage] = useState('');
   const [stage, setStage] = useState('init');
   const [resultVideo, setResultVideo] = useState(null);
+  const [activeJobId, setActiveJobId] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -54,6 +56,20 @@ export default function VideoStudioView() {
     }
   };
 
+  const handleCancelVideo = async () => {
+    if (activeJobId) {
+      try {
+        await fetch(`/api/jobs/${activeJobId}/cancel`, { method: 'POST' });
+      } catch (e) {
+        console.error('Lỗi khi hủy video:', e);
+      }
+    }
+    setIsProcessing(false);
+    setActiveJobId(null);
+    setStatusMessage('Đã hủy tác vụ video.');
+    setErrorMsg('Tác vụ siêu phân giải video đã được hủy theo yêu cầu.');
+  };
+
   const handleStartUpscale = async () => {
     if (!videoFile) return;
 
@@ -67,8 +83,10 @@ export default function VideoStudioView() {
     formData.append('file', videoFile);
     formData.append('scale', scale);
     formData.append('model', model);
-    formData.append('tile_size', 100);
+    formData.append('tile_size', 200);
     formData.append('gpu_id', 0);
+
+    let userCancelled = false;
 
     try {
       const response = await fetch('/api/video/upscale-stream', {
@@ -97,7 +115,9 @@ export default function VideoStudioView() {
           if (trimmed.startsWith('data: ')) {
             try {
               const event = JSON.parse(trimmed.slice(6));
-              if (event.type === 'progress') {
+              if (event.type === 'job_created') {
+                setActiveJobId(event.job_id);
+              } else if (event.type === 'progress') {
                 setProcessPercent(event.percent);
                 setStage(event.stage);
                 setStatusMessage(event.message);
@@ -105,6 +125,10 @@ export default function VideoStudioView() {
                 setProcessPercent(100);
                 setStage('done');
                 setResultVideo(event.data);
+              } else if (event.type === 'cancelled') {
+                userCancelled = true;
+                setErrorMsg('Tác vụ siêu phân giải video đã được hủy.');
+                break;
               } else if (event.type === 'error') {
                 throw new Error(event.error || 'Lỗi khi xử lý video');
               }
@@ -115,10 +139,13 @@ export default function VideoStudioView() {
         }
       }
     } catch (err) {
-      console.error('Lỗi siêu phân giải video:', err);
-      setErrorMsg(err.message || 'Đã xảy ra lỗi trong quá trình siêu phân giải video.');
+      if (!userCancelled) {
+        console.error('Lỗi siêu phân giải video:', err);
+        setErrorMsg(err.message || 'Đã xảy ra lỗi trong quá trình siêu phân giải video.');
+      }
     } finally {
       setIsProcessing(false);
+      setActiveJobId(null);
     }
   };
 
@@ -282,6 +309,37 @@ export default function VideoStudioView() {
                     }}
                   />
                 </div>
+
+                {/* Cancel Processing Button */}
+                <button
+                  onClick={handleCancelVideo}
+                  style={{
+                    marginTop: '20px',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    color: '#fca5a5',
+                    borderRadius: '10px',
+                    padding: '8px 22px',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    margin: '20px auto 0 auto',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                    e.currentTarget.style.borderColor = '#ef4444';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                  }}
+                >
+                  <X size={15} /> Hủy Tác Vụ Video
+                </button>
               </div>
             </div>
           ) : resultVideo ? (

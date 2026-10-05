@@ -173,7 +173,7 @@ export default function BatchProcessingView({
         type="file"
         ref={fileInputRef}
         multiple
-        accept="image/png, image/jpeg, image/webp"
+        accept="image/*, .heic, .heif, .tiff, .tif, .avif"
         onChange={(e) => {
           if (e.target.files) handleFilesAdded(e.target.files);
           e.target.value = '';

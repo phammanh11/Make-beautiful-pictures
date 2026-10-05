@@ -10,6 +10,12 @@ from PIL import Image, ImageFilter, ImageOps
 import cv2
 import numpy as np
 
+try:
+    import pillow_heif
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
+
 from config import (
     ENGINE_EXE,
     MODELS_DIR,
@@ -130,7 +136,9 @@ class UpscaleProcessor:
         enable_clahe: bool = False,
         enable_denoise: bool = False,
         output_format: str = "png",
-        progress_callback: Optional[Any] = None
+        progress_callback: Optional[Any] = None,
+        on_proc_started: Optional[Any] = None,
+        cancel_checker: Optional[Any] = None
     ) -> Dict[str, Any]:
         start_time = time.time()
         
@@ -161,6 +169,16 @@ class UpscaleProcessor:
         final_filename = f"upscaled_{job_id}.{out_ext}"
         final_output_path = OUTPUTS_DIR / final_filename
 
+        # Tự động chuyển đổi định dạng đầu vào nếu không phải JPG/PNG/WEBP (ví dụ HEIC, AVIF, BMP, TIFF)
+        engine_input_path = input_path
+        temp_converted_input = None
+        if input_path.suffix.lower() in ('.heic', '.heif', '.avif', '.bmp', '.tiff', '.tif'):
+            temp_converted_input = UPLOADS_DIR / f"temp_conv_{job_id}.png"
+            with Image.open(input_path) as src_im:
+                src_im = ImageOps.exif_transpose(src_im) or src_im
+                src_im.convert("RGB").save(temp_converted_input, format="PNG")
+            engine_input_path = temp_converted_input
+
         # Đọc EXIF gốc để bảo tồn
         orig_exif = None
         try:
@@ -182,7 +200,7 @@ class UpscaleProcessor:
         else:
             model_key = model_name
 
-        input_abs = input_path.resolve()
+        input_abs = engine_input_path.resolve()
         raw_ai_output_abs = raw_ai_output.resolve()
         models_dir_abs = self.models_dir.resolve()
 
@@ -201,7 +219,7 @@ class UpscaleProcessor:
         if progress_callback:
             progress_callback(10.0, "ai_upscale", f"Đang khởi động Vulkan GPU với mô hình {model_key}...")
         
-        # Execute Real-ESRGAN với real-time stderr progress tracking
+        # Execute Real-ESRGAN với real-time stderr progress tracking & cancellation check
         import re
         pct_regex = re.compile(r"(\d+(\.\d+)?)%")
         
@@ -215,7 +233,14 @@ class UpscaleProcessor:
                 bufsize=1,
                 universal_newlines=True
             )
+            if on_proc_started:
+                on_proc_started(proc)
+
             for line in iter(proc.stderr.readline, ''):
+                if cancel_checker and cancel_checker():
+                    proc.terminate()
+                    proc.kill()
+                    raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
                 if not line:
                     break
                 m = pct_regex.search(line)
@@ -232,6 +257,8 @@ class UpscaleProcessor:
             if proc.returncode != 0:
                 raise RuntimeError(f"Vulkan GPU run exited with code {proc.returncode}")
         except Exception as e:
+            if cancel_checker and cancel_checker():
+                raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
             print(f"[AI Upscaler] GPU run error ({e}). Falling back to CPU mode...")
             if progress_callback:
                 progress_callback(15.0, "ai_upscale", "Chuyển sang chế độ CPU đa luồng dự phòng...")
@@ -244,7 +271,14 @@ class UpscaleProcessor:
                 text=True,
                 bufsize=1
             )
+            if on_proc_started:
+                on_proc_started(proc_cpu)
+
             for line in iter(proc_cpu.stderr.readline, ''):
+                if cancel_checker and cancel_checker():
+                    proc_cpu.terminate()
+                    proc_cpu.kill()
+                    raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
                 if not line:
                     break
                 m = pct_regex.search(line)
@@ -335,18 +369,35 @@ class UpscaleProcessor:
             if orig_exif:
                 save_kwargs["exif"] = orig_exif
 
-            # Export in desired format
+            # Export in desired format with EXIF error fallback
             out_fmt = output_format.upper()
-            if out_fmt in ("JPG", "JPEG"):
-                if final_img.mode in ("RGBA", "P"):
-                    final_img = final_img.convert("RGB")
-                final_img.save(final_output_path, format="JPEG", quality=98, subsampling=0, **save_kwargs)
-            elif out_fmt == "WEBP":
-                final_img.save(final_output_path, format="WEBP", quality=95, method=6)
-            elif out_fmt == "TIFF":
-                final_img.save(final_output_path, format="TIFF", compression="tiff_lzw", **save_kwargs)
-            else:
-                final_img.save(final_output_path, format="PNG", compress_level=3, **save_kwargs)
+            try:
+                if out_fmt in ("JPG", "JPEG"):
+                    if final_img.mode in ("RGBA", "P"):
+                        final_img = final_img.convert("RGB")
+                    final_img.save(final_output_path, format="JPEG", quality=98, subsampling=0, **save_kwargs)
+                elif out_fmt == "WEBP":
+                    webp_kwargs: Dict[str, Any] = {"quality": 95, "method": 6}
+                    if orig_exif:
+                        webp_kwargs["exif"] = orig_exif
+                    final_img.save(final_output_path, format="WEBP", **webp_kwargs)
+                elif out_fmt == "TIFF":
+                    final_img.save(final_output_path, format="TIFF", compression="tiff_lzw", **save_kwargs)
+                else:
+                    final_img.save(final_output_path, format="PNG", compress_level=3, **save_kwargs)
+            except Exception as save_err:
+                print(f"[AI Upscaler] Warning saving with EXIF ({save_err}), retrying without EXIF...")
+                fallback_kwargs: Dict[str, Any] = {"dpi": (300, 300)}
+                if out_fmt in ("JPG", "JPEG"):
+                    if final_img.mode in ("RGBA", "P"):
+                        final_img = final_img.convert("RGB")
+                    final_img.save(final_output_path, format="JPEG", quality=98, subsampling=0, **fallback_kwargs)
+                elif out_fmt == "WEBP":
+                    final_img.save(final_output_path, format="WEBP", quality=95, method=6)
+                elif out_fmt == "TIFF":
+                    final_img.save(final_output_path, format="TIFF", compression="tiff_lzw", **fallback_kwargs)
+                else:
+                    final_img.save(final_output_path, format="PNG", compress_level=3, **fallback_kwargs)
 
         # Cleanup raw AI temp file
         if raw_ai_output.exists():

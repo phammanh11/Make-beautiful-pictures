@@ -10,6 +10,7 @@ import BatchProcessingView from './components/BatchProcessingView';
 import ImageEditorModal from './components/ImageEditorModal';
 import VideoStudioView from './components/VideoStudioView';
 import BgRemoverModal from './components/BgRemoverModal';
+import ColorizeModal from './components/ColorizeModal';
 import { Sparkles, RefreshCw, Layers, CheckCircle, ClipboardCheck, Crop, Scissors, Palette, Film } from 'lucide-react';
 
 export default function App() {
@@ -24,7 +25,8 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isBgRemoverOpen, setIsBgRemoverOpen] = useState(false);
-  const [isColorizing, setIsColorizing] = useState(false);
+  const [isColorizeOpen, setIsColorizeOpen] = useState(false);
+  const [activeJobId, setActiveJobId] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
 
   // Real-time Progress Streaming State
@@ -218,6 +220,20 @@ export default function App() {
     }
   };
 
+  const handleCancelJob = async () => {
+    if (activeJobId) {
+      try {
+        await fetch(`/api/jobs/${activeJobId}/cancel`, { method: 'POST' });
+      } catch (e) {
+        console.error('Lỗi khi gửi yêu cầu hủy:', e);
+      }
+    }
+    setIsProcessing(false);
+    setActiveJobId(null);
+    setStatusMessage('Đã hủy tác vụ theo yêu cầu.');
+    setErrorMsg('Tác vụ siêu phân giải đã được hủy.');
+  };
+
   const handleStartUpscale = async () => {
     if (!currentImage || !currentImage.file) return;
 
@@ -243,6 +259,7 @@ export default function App() {
     formData.append('gpu_id', 0);
 
     let streamCompleted = false;
+    let userCancelled = false;
 
     try {
       const response = await fetch('/api/upscale-stream', {
@@ -275,7 +292,9 @@ export default function App() {
           if (trimmed.startsWith('data: ')) {
             try {
               const event = JSON.parse(trimmed.slice(6));
-              if (event.type === 'progress') {
+              if (event.type === 'job_created') {
+                setActiveJobId(event.job_id);
+              } else if (event.type === 'progress') {
                 setRealPercent(event.percent);
                 setProgressStage(event.stage);
                 setStatusMessage(event.message);
@@ -285,6 +304,10 @@ export default function App() {
                 setProcessResult(event.data);
                 loadHistory();
                 streamCompleted = true;
+              } else if (event.type === 'cancelled') {
+                userCancelled = true;
+                setErrorMsg('Tác vụ siêu phân giải đã được hủy.');
+                break;
               } else if (event.type === 'error') {
                 throw new Error(event.error || 'Lỗi khi xử lý AI');
               }
@@ -295,7 +318,7 @@ export default function App() {
         }
       }
     } catch (err) {
-      if (!streamCompleted) {
+      if (!streamCompleted && !userCancelled) {
         console.warn('Stream gặp sự cố, tự động fallback sang endpoint chuẩn...', err);
         try {
           const res = await fetch('/api/upscale', {
@@ -315,6 +338,7 @@ export default function App() {
       }
     } finally {
       setIsProcessing(false);
+      setActiveJobId(null);
     }
   };
 
@@ -451,6 +475,7 @@ export default function App() {
                 realPercent={realPercent}
                 stage={progressStage}
                 statusMessage={statusMessage}
+                onCancel={handleCancelJob}
               />
             ) : processResult ? (
               <>
@@ -557,15 +582,14 @@ export default function App() {
                     </button>
 
                     <button
-                      onClick={handleColorize}
-                      disabled={isColorizing}
+                      onClick={() => setIsColorizeOpen(true)}
                       style={{
                         background: 'rgba(168, 85, 247, 0.15)',
                         border: '1px solid #a855f7',
                         color: '#c084fc',
                         borderRadius: '8px',
                         padding: '5px 10px',
-                        cursor: isColorizing ? 'wait' : 'pointer',
+                        cursor: 'pointer',
                         fontSize: '0.78rem',
                         fontWeight: 600,
                         display: 'flex',
@@ -574,7 +598,7 @@ export default function App() {
                         transition: 'all 0.2s ease'
                       }}
                     >
-                      <Palette size={13} /> {isColorizing ? 'Đang tô màu...' : 'Tô Màu Cổ'}
+                      <Palette size={13} /> Tô Màu Cổ
                     </button>
 
                     <button
@@ -679,6 +703,17 @@ export default function App() {
           handleImageSelected(newImg);
         }}
       />
+
+      {/* AI Colorizer Modal */}
+      {isColorizeOpen && currentImage && (
+        <ColorizeModal
+          imageInput={currentImage}
+          onClose={() => setIsColorizeOpen(false)}
+          onApplyToStudio={(newImg) => {
+            handleImageSelected(newImg);
+          }}
+        />
+      )}
     </div>
   );
 }

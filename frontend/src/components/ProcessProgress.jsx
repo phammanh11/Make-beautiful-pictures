@@ -1,7 +1,7 @@
 import React from 'react';
-import { Sparkles, Cpu, Layers, CheckCircle, Zap } from 'lucide-react';
+import { Sparkles, Cpu, Layers, CheckCircle, Zap, X } from 'lucide-react';
 
-export default function ProcessProgress({ preset = '4k', model = 'realesrgan-x4plus', realPercent, stage, statusMessage }) {
+export default function ProcessProgress({ preset = '4k', model = 'realesrgan-x4plus', realPercent, stage, statusMessage, onCancel }) {
   // Xác định step active dựa trên stage thực tế từ backend
   let activeStep = 0;
   if (stage === 'init') activeStep = 0;
@@ -181,6 +181,38 @@ export default function ProcessProgress({ preset = '4k', model = 'realesrgan-x4p
           );
         })}
       </div>
+
+      {/* Cancel Action Button */}
+      {onCancel && (
+        <button
+          onClick={onCancel}
+          style={{
+            marginTop: '28px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#fca5a5',
+            borderRadius: '10px',
+            padding: '8px 22px',
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+            e.currentTarget.style.borderColor = '#ef4444';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+            e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+          }}
+        >
+          <X size={15} /> Hủy Tác Vụ
+        </button>
+      )}
     </div>
   );
 }
