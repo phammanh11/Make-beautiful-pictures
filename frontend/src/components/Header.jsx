@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Cpu, Layers, History, HelpCircle } from 'lucide-react';
+import { Sparkles, Cpu, Layers, History, HelpCircle, Film } from 'lucide-react';
 
 export default function Header({ 
   systemInfo, 
@@ -69,7 +69,8 @@ export default function Header({
             background: 'rgba(0, 0, 0, 0.45)',
             padding: '4px',
             borderRadius: '12px',
-            border: '1px solid rgba(255, 255, 255, 0.08)'
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            gap: '4px'
           }}
         >
           <button
@@ -114,6 +115,28 @@ export default function Header({
           >
             <Layers size={14} />
             <span>Xử Lý Hàng Loạt (Batch)</span>
+          </button>
+
+          <button
+            onClick={() => onChangeMode('video')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              background: currentMode === 'video' ? 'linear-gradient(135deg, rgba(121, 40, 202, 0.3), rgba(0, 242, 254, 0.3))' : 'transparent',
+              color: currentMode === 'video' ? '#c084fc' : 'var(--text-muted)',
+              fontSize: '0.8rem',
+              fontWeight: currentMode === 'video' ? 700 : 500,
+              cursor: 'pointer',
+              boxShadow: currentMode === 'video' ? '0 0 12px rgba(121, 40, 202, 0.35)' : 'none',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Film size={14} />
+            <span>Studio Video AI (4K)</span>
           </button>
         </div>
       )}

@@ -127,12 +127,18 @@ class UpscaleProcessor:
         detail_blend: float = 0.40,
         enhance_face: bool = True,
         face_strength: float = 0.85,
-        output_format: str = "png"
+        enable_clahe: bool = False,
+        enable_denoise: bool = False,
+        output_format: str = "png",
+        progress_callback: Optional[Any] = None
     ) -> Dict[str, Any]:
         start_time = time.time()
         
         if not input_path.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
+
+        if progress_callback:
+            progress_callback(5.0, "init", "Đang nạp ảnh và khởi tạo mô hình Vulkan NCNN...")
             
         # Ensure safe tile size
         if tile_size <= 0:
@@ -149,8 +155,19 @@ class UpscaleProcessor:
         
         job_id = str(uuid.uuid4())[:8]
         raw_ai_output = OUTPUTS_DIR / f"raw_ai_{job_id}.png"
-        final_filename = f"upscaled_{job_id}.{output_format.lower()}"
+        out_ext = output_format.lower()
+        if out_ext == "jpeg":
+            out_ext = "jpg"
+        final_filename = f"upscaled_{job_id}.{out_ext}"
         final_output_path = OUTPUTS_DIR / final_filename
+
+        # Đọc EXIF gốc để bảo tồn
+        orig_exif = None
+        try:
+            with Image.open(input_path) as raw_input_img:
+                orig_exif = raw_input_img.getexif()
+        except Exception:
+            orig_exif = None
 
         # Determine AI scale
         ai_scale = 4
@@ -181,29 +198,72 @@ class UpscaleProcessor:
         ]
         
         print(f"[AI Upscaler] Running command: {' '.join(cmd)}")
+        if progress_callback:
+            progress_callback(10.0, "ai_upscale", f"Đang khởi động Vulkan GPU với mô hình {model_key}...")
         
-        # Execute Real-ESRGAN
+        # Execute Real-ESRGAN với real-time stderr progress tracking
+        import re
+        pct_regex = re.compile(r"(\d+(\.\d+)?)%")
+        
         try:
-            res = subprocess.run(
+            proc = subprocess.Popen(
                 cmd,
                 cwd=str(self.engine_path.parent),
-                capture_output=True,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
                 text=True,
-                check=True
+                bufsize=1,
+                universal_newlines=True
             )
-        except subprocess.CalledProcessError as e:
-            print(f"[AI Upscaler] GPU run error ({e.stderr}). Falling back to CPU mode...")
+            for line in iter(proc.stderr.readline, ''):
+                if not line:
+                    break
+                m = pct_regex.search(line)
+                if m:
+                    gpu_pct = float(m.group(1))
+                    overall_pct = round(10.0 + (gpu_pct * 0.60), 1)
+                    if progress_callback:
+                        progress_callback(
+                            overall_pct,
+                            "ai_upscale",
+                            f"Đang siêu phân giải AI GPU: {gpu_pct:.1f}% (Tile {tile_size}px)"
+                        )
+            proc.wait()
+            if proc.returncode != 0:
+                raise RuntimeError(f"Vulkan GPU run exited with code {proc.returncode}")
+        except Exception as e:
+            print(f"[AI Upscaler] GPU run error ({e}). Falling back to CPU mode...")
+            if progress_callback:
+                progress_callback(15.0, "ai_upscale", "Chuyển sang chế độ CPU đa luồng dự phòng...")
             cmd[-1] = "-1"
-            res = subprocess.run(
+            proc_cpu = subprocess.Popen(
                 cmd,
                 cwd=str(self.engine_path.parent),
-                capture_output=True,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
                 text=True,
-                check=True
+                bufsize=1
             )
+            for line in iter(proc_cpu.stderr.readline, ''):
+                if not line:
+                    break
+                m = pct_regex.search(line)
+                if m:
+                    cpu_pct = float(m.group(1))
+                    overall_pct = round(10.0 + (cpu_pct * 0.60), 1)
+                    if progress_callback:
+                        progress_callback(
+                            overall_pct,
+                            "ai_upscale",
+                            f"Đang siêu phân giải AI CPU đa luồng: {cpu_pct:.1f}%"
+                        )
+            proc_cpu.wait()
 
         if not raw_ai_output.exists():
             raise RuntimeError("Real-ESRGAN failed to produce output image.")
+
+        if progress_callback:
+            progress_callback(72.0, "resample", f"Đang tái tạo độ phân giải mục tiêu {target_w}×{target_h} (Lanczos-4)...")
 
         # Post-Processing: Resampling & Deep Face Restoration
         faces_restored_count = 0
@@ -217,8 +277,32 @@ class UpscaleProcessor:
             else:
                 final_img = ai_img.copy()
 
+            # Optional Pre-filter: Denoise hoặc CLAHE
+            if enable_denoise or enable_clahe:
+                if progress_callback:
+                    progress_callback(76.0, "enhancement", "Đang áp dụng bộ lọc khử nhiễu & tối ưu tương phản CLAHE...")
+                np_img = np.array(final_img.convert("RGB"))
+                bgr_img = cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
+
+                if enable_denoise:
+                    # Edge-preserving bilateral filter
+                    bgr_img = cv2.bilateralFilter(bgr_img, d=7, sigmaColor=50, sigmaSpace=7)
+
+                if enable_clahe:
+                    # Contrast Limited Adaptive Histogram Equalization trên kênh L (Luminance)
+                    lab = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2LAB)
+                    l, a, b = cv2.split(lab)
+                    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                    cl = clahe.apply(l)
+                    merged_lab = cv2.merge((cl, a, b))
+                    bgr_img = cv2.cvtColor(merged_lab, cv2.COLOR_LAB2BGR)
+
+                final_img = Image.fromarray(cv2.cvtColor(bgr_img, cv2.COLOR_BGR2RGB))
+
             # Deep Face Restoration (GFPGAN + YuNet)
             if enhance_face and "anime" not in model_name and self.face_restorer.is_ready:
+                if progress_callback:
+                    progress_callback(80.0, "face_restore", "Đang nhận diện và phục hồi chi tiết khuôn mặt qua GFPGAN DirectML...")
                 try:
                     rgb_arr = np.array(final_img.convert("RGB"))
                     bgr_arr = cv2.cvtColor(rgb_arr, cv2.COLOR_RGB2BGR)
@@ -234,6 +318,8 @@ class UpscaleProcessor:
 
             # Apply configurable sharpness enhancement
             if enhance_sharpness and sharpen_percent > 0:
+                if progress_callback:
+                    progress_callback(90.0, "post_process", f"Đang áp dụng Unsharp Masking ({sharpen_percent}%) & cấu trúc vi mô...")
                 final_img = final_img.filter(
                     ImageFilter.UnsharpMask(radius=1.2, percent=int(sharpen_percent), threshold=2)
                 )
@@ -241,16 +327,26 @@ class UpscaleProcessor:
                     detail_img = final_img.filter(ImageFilter.DETAIL)
                     final_img = Image.blend(final_img, detail_img, min(1.0, max(0.0, float(detail_blend))))
 
+            if progress_callback:
+                progress_callback(95.0, "save", f"Đang xuất file {out_ext.upper()} với chuẩn in ấn 300 DPI...")
+
+            # Cấu hình lưu ảnh chuẩn in ấn 300 DPI và bảo tồn EXIF gốc
+            save_kwargs: Dict[str, Any] = {"dpi": (300, 300)}
+            if orig_exif:
+                save_kwargs["exif"] = orig_exif
+
             # Export in desired format
             out_fmt = output_format.upper()
             if out_fmt in ("JPG", "JPEG"):
                 if final_img.mode in ("RGBA", "P"):
                     final_img = final_img.convert("RGB")
-                final_img.save(final_output_path, format="JPEG", quality=98, subsampling=0)
+                final_img.save(final_output_path, format="JPEG", quality=98, subsampling=0, **save_kwargs)
             elif out_fmt == "WEBP":
                 final_img.save(final_output_path, format="WEBP", quality=95, method=6)
+            elif out_fmt == "TIFF":
+                final_img.save(final_output_path, format="TIFF", compression="tiff_lzw", **save_kwargs)
             else:
-                final_img.save(final_output_path, format="PNG", compress_level=3)
+                final_img.save(final_output_path, format="PNG", compress_level=3, **save_kwargs)
 
         # Cleanup raw AI temp file
         if raw_ai_output.exists():
@@ -258,6 +354,9 @@ class UpscaleProcessor:
                 os.remove(raw_ai_output)
             except Exception:
                 pass
+
+        if progress_callback:
+            progress_callback(100.0, "done", "Hoàn tất siêu phân giải ảnh!")
 
         elapsed = round(time.time() - start_time, 2)
         final_info = self.get_image_info(final_output_path)
@@ -272,12 +371,16 @@ class UpscaleProcessor:
             "effective_scale": effective_scale,
             "elapsed_seconds": elapsed,
             "faces_restored": faces_restored_count,
+            "dpi": 300,
             "pro_settings": {
                 "sharpen_percent": sharpen_percent,
                 "detail_blend": detail_blend,
                 "enhance_face": enhance_face,
                 "face_strength": face_strength,
-                "tile_size": tile_size
+                "tile_size": tile_size,
+                "enable_clahe": enable_clahe,
+                "enable_denoise": enable_denoise,
+                "output_format": output_format
             },
             "download_url": f"/outputs/{final_filename}",
             "original_url": f"/uploads/{input_path.name}"

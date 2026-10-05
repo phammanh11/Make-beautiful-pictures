@@ -21,9 +21,11 @@
 
 3. **Công Nghệ Nhận Diện & Tinh Chỉnh Nâng Cao (Pro Tuning & Face Enhancer)**:
    - **Tự Động Phân Loại (Auto-Detect Classifier)**: Quét da người, bầu trời, cây cối, QR và kết cấu ma trận 4x4 để tự động kích hoạt model tối ưu.
-   - **Tăng Cường Chân Dung (Face Enhancement)**: Nhận diện khuôn mặt, làm mịn da tự nhiên và tăng cường vi chi tiết vùng mắt/tóc.
-   - **Thanh Trượt Điều Chỉnh Độ Nét (Sharpening 0–250%) & Chi Tiết Vi Mô (Detail Blend 0–100%)**: Tự do kiểm soát độ nét theo ý muốn.
-   - **Non-blocking Asynchronous**: Tiến trình AI chạy trong background worker thread, không bao giờ làm nghẽn FastAPI server.
+   - **Tăng Cường Chân Dung (Face Enhancement)**: Nhận diện khuôn mặt YuNet + phục hồi chi tiết bằng GFPGAN DirectML.
+   - **Tiến Trình GPU Thời Gian Thực (Real-time SSE Streaming)**: Đọc từng tile suy luận từ Vulkan NCNN C++ binary và stream phần trăm thực tế lên giao diện.
+   - **Bộ Lọc Nâng Cao (CLAHE & Denoise)**: Cân bằng dải tương phản thích ứng cục bộ trong không gian màu LAB và khử nhiễu hạt cảm biến ISO.
+   - **Chuẩn In Ấn 300 DPI & Bảo Tồn EXIF**: Tự động gán metadata 300 DPI, giữ thông số máy ảnh gốc và hỗ trợ xuất định dạng **TIFF** không nén, PNG, JPG, WEBP.
+   - **Bộ Công Cụ Cắt Cúp & Chuẩn Bị Ảnh (Pre-processing Studio)**: Cắt ảnh chuẩn tỉ lệ (1:1, 4:5, 16:9, 9:16, 3:2, Tự do), xoay 90 độ, lật ngang/dọc và tinh chỉnh sáng tối trước khi siêu phân giải.
 
 4. **Quản Lý Lịch Sử Bền Vững & Xuất File ZIP (Persistent Storage & Batch Export)**:
    - Cơ sở dữ liệu SQLite lưu trữ lịch sử xử lý vĩnh viễn trên đĩa, không bị mất khi tắt máy.
@@ -34,10 +36,20 @@
 5. **Giao Diện Studio Cao Cấp & Thanh Trượt So Sánh (Split-Slider)**:
    - Kéo thanh chia đôi màn hình tương tác trực tiếp Before / After từng pixel.
    - Chế độ Zoom & Pan đồng bộ (100%, 200%, 400%) để soi cận cảnh chi tiết.
-   - Các chế độ hiển thị: Split View (So sánh trượt), Ảnh gốc (Before), AI Super-Resolution (After).
-   - Bảng đo lường HUD trực quan: hiển thị chi tiết độ phân giải, số Megapixels (+800%), dung lượng file và thời gian xử lý.
+   - Kính lúp phóng đại Magnifier 3.0x - 5.0x tương tác di chuột.
+   - Các chế độ hiển thị: Split View (So sánh trượt), Side-by-Side (Song song), Ảnh gốc (Before), AI Super-Resolution (After).
+   - Phím tắt dán ảnh Clipboard toàn cục (`Ctrl + V`) mở ảnh tức thì.
 
-6. **Tối Ưu Phần Cứng & Chống Tràn Bộ Nhớ (Zero Out-Of-Memory)**:
+6. **AI Video Super-Resolution Studio (Làm Nét Video Lên 4K 60fps)**:
+   - Tự động tách frames và audio gốc qua **FFmpeg**.
+   - Siêu phân giải hàng loạt frame bằng mô hình siêu tốc **Real-ESRGAN AnimeVideo v3** trên GPU Intel Iris Xe.
+   - Ghép lại thành video MP4 chuẩn nén H.264 cao cấp, bảo toàn 100% âm thanh gốc và thời lượng.
+
+7. **AI Tách Nền E-commerce (Background Remover) & Tô Màu Ảnh Cổ (Photo Colorizer)**:
+   - **Tách Nền 1-Click (rembg)**: Tách phông nền trong suốt (PNG), nền trắng chuẩn sàn TMĐT (Shopee/Lazada), nền màu tùy chọn hoặc xóa phông Bokeh mờ ảo.
+   - **Tô Màu Ảnh Đen Trắng Cổ Điển**: Phục chế ảnh ông bà xưa thành ảnh màu chân thực, sống động.
+
+8. **Tối Ưu Phần Cứng & Chống Tràn Bộ Nhớ (Zero Out-Of-Memory)**:
    - Sử dụng **Vulkan NCNN Engine** chạy trực tiếp trên GPU Intel Iris Xe mà không cần cài 10GB CUDA driver.
    - Tự động chia nhỏ khối ảnh (**Tiling 100-400px**) giúp xử lý ảnh khổng lồ mà không bao giờ bị crash hoặc tràn VRAM.
    - Thuật toán **Lanczos-4 SuperSampling** kết hợp **Bộ lọc Unsharp Masking** cho ảnh trong trẻo, sắc sảo vượt trội so với phóng to thông thường.

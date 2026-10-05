@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  ai-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tao-anh-dep-studio:latest
+    container_name: tao-anh-dep-studio
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - NO_BROWSER=1
+    volumes:
+      - ./backend/uploads:/app/backend/uploads
+      - ./backend/outputs:/app/backend/outputs
+      - ./backend/history.db:/app/backend/history.db

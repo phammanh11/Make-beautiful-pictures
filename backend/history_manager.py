@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import time
 import zipfile
@@ -68,7 +68,7 @@ class HistoryManager:
                 del db_records[filename]
 
         # 2. Quet cac file anh trong outputs/
-        valid_exts = {".png", ".jpg", ".jpeg", ".webp"}
+        valid_exts = {".png", ".jpg", ".jpeg", ".webp", ".tiff", ".tif"}
         if OUTPUTS_DIR.exists():
             for f in sorted(OUTPUTS_DIR.glob("*"), key=lambda x: x.stat().st_mtime, reverse=True):
                 if not f.is_file() or f.suffix.lower() not in valid_exts or f.name.startswith("."):

@@ -21,11 +21,14 @@ from config import (
 from processor import UpscaleProcessor
 from classifier import classify_image
 from history_manager import HistoryManager
+from bg_remover import remove_background
+from video_processor import VideoUpscaleProcessor
+from colorizer import PhotoColorizer
 
 app = FastAPI(
-    title="AI Image Super-Resolution Studio API",
-    description="High Performance AI Super-Resolution (720p to 1080p, 2K, 4K, 8K) powered by Real-ESRGAN, Vulkan & GFPGAN Face Restoration",
-    version="2.1.0"
+    title="AI Super-Resolution & Media Studio API",
+    description="High Performance AI Super-Resolution (Image & Video 4K/8K), Background Remover & Colorizer",
+    version="3.0.0"
 )
 
 # Enable CORS
@@ -50,8 +53,24 @@ if FRONTEND_DIST.exists():
     def serve_frontend_root():
         return FileResponse(FRONTEND_DIST / "index.html")
 
+    @app.get("/favicon.svg")
+    def serve_favicon():
+        fav = FRONTEND_DIST / "favicon.svg"
+        if fav.exists():
+            return FileResponse(fav)
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+    @app.get("/icons.svg")
+    def serve_icons():
+        ico = FRONTEND_DIST / "icons.svg"
+        if ico.exists():
+            return FileResponse(ico)
+        return FileResponse(FRONTEND_DIST / "index.html")
+
 processor = UpscaleProcessor()
 history_mgr = HistoryManager()
+video_processor = VideoUpscaleProcessor()
+colorizer = PhotoColorizer()
 
 @app.on_event("startup")
 def on_startup():
@@ -120,6 +139,9 @@ async def detect_model_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi phân tích ảnh: {str(e)}")
 
+from fastapi.responses import FileResponse, StreamingResponse
+import json
+
 @app.post("/api/upscale")
 async def upscale_image(
     file: UploadFile = File(...),
@@ -133,6 +155,8 @@ async def upscale_image(
     detail_blend: float = Form(0.40),
     enhance_face: bool = Form(True),
     face_strength: float = Form(0.85),
+    enable_clahe: bool = Form(False),
+    enable_denoise: bool = Form(False),
     output_format: str = Form("png")
 ):
     if not file.filename:
@@ -174,6 +198,8 @@ async def upscale_image(
             detail_blend=detail_blend,
             enhance_face=enhance_face,
             face_strength=face_strength,
+            enable_clahe=enable_clahe,
+            enable_denoise=enable_denoise,
             output_format=output_format
         )
         
@@ -188,6 +214,118 @@ async def upscale_image(
         print(f"[Error in upscale] {e}")
         raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý AI: {str(e)}")
 
+@app.post("/api/upscale-stream")
+async def upscale_image_stream(
+    file: UploadFile = File(...),
+    model: str = Form("auto"),
+    preset: str = Form("1080p"),
+    custom_scale: Optional[float] = Form(None),
+    tile_size: int = Form(100),
+    gpu_id: int = Form(0),
+    enhance_sharpness: bool = Form(True),
+    sharpen_percent: int = Form(120),
+    detail_blend: float = Form(0.40),
+    enhance_face: bool = Form(True),
+    face_strength: float = Form(0.85),
+    enable_clahe: bool = Form(False),
+    enable_denoise: bool = Form(False),
+    output_format: str = Form("png")
+):
+    """
+    Endpoint SSE trả về tiến trình thực từ GPU Vulkan & GFPGAN theo thời gian thực
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Không có file được tải lên")
+
+    ext = Path(file.filename).suffix or ".png"
+    safe_name = f"{uuid.uuid4().hex[:8]}_{Path(file.filename).stem[:20]}{ext}"
+    input_path = UPLOADS_DIR / safe_name
+
+    try:
+        with open(input_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu file: {str(e)}")
+
+    async def event_generator():
+        queue: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+
+        def progress_cb(percent: float, stage: str, message: str):
+            loop.call_soon_threadsafe(queue.put_nowait, {
+                "type": "progress",
+                "percent": percent,
+                "stage": stage,
+                "message": message
+            })
+
+        def run_worker():
+            nonlocal model
+            try:
+                progress_cb(2.0, "init", "Đang nhận diện đặc trưng ảnh...")
+                detection_info = None
+                if model == "auto" or model not in MODELS:
+                    try:
+                        detection_info = classify_image(input_path)
+                        model = detection_info["recommended_model"]
+                        progress_cb(5.0, "init", f"Phát hiện: {detection_info['label']} ➔ Sử dụng {model}")
+                    except Exception as e:
+                        print(f"[Auto-Detect Warning] {e}")
+                        model = "realesrgan-x4plus"
+
+                res = processor.process(
+                    input_path=input_path,
+                    model_name=model,
+                    preset=preset,
+                    custom_scale=custom_scale,
+                    tile_size=tile_size,
+                    gpu_id=gpu_id,
+                    enhance_sharpness=enhance_sharpness,
+                    sharpen_percent=sharpen_percent,
+                    detail_blend=detail_blend,
+                    enhance_face=enhance_face,
+                    face_strength=face_strength,
+                    enable_clahe=enable_clahe,
+                    enable_denoise=enable_denoise,
+                    output_format=output_format,
+                    progress_callback=progress_cb
+                )
+
+                if detection_info:
+                    res["auto_detected"] = detection_info
+
+                history_mgr.add_item(res)
+                loop.call_soon_threadsafe(queue.put_nowait, {
+                    "type": "complete",
+                    "data": res
+                })
+            except Exception as ex:
+                print(f"[Worker Exception] {ex}")
+                loop.call_soon_threadsafe(queue.put_nowait, {
+                    "type": "error",
+                    "error": str(ex)
+                })
+            finally:
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        threading.Thread(target=run_worker, daemon=True).start()
+
+        while True:
+            event = await queue.get()
+            if event is None:
+                break
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
 @app.post("/api/upscale-batch")
 async def upscale_batch(
     files: List[UploadFile] = File(...),
@@ -201,6 +339,8 @@ async def upscale_batch(
     detail_blend: float = Form(0.40),
     enhance_face: bool = Form(True),
     face_strength: float = Form(0.85),
+    enable_clahe: bool = Form(False),
+    enable_denoise: bool = Form(False),
     output_format: str = Form("png")
 ):
     results = []
@@ -228,6 +368,8 @@ async def upscale_batch(
                 detail_blend=detail_blend,
                 enhance_face=enhance_face,
                 face_strength=face_strength,
+                enable_clahe=enable_clahe,
+                enable_denoise=enable_denoise,
                 output_format=output_format
             )
             results.append(res)
@@ -242,6 +384,182 @@ async def upscale_batch(
         "results": results,
         "errors": errors
     }
+
+# --- Background Removal Endpoint ---
+@app.post("/api/remove-bg")
+async def remove_background_endpoint(
+    file: UploadFile = File(...),
+    bg_mode: str = Form("transparent"), # transparent, white, color, blur
+    bg_color: str = Form("#ffffff"),
+    blur_radius: int = Form(15),
+    feather_radius: int = Form(1)
+):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Chưa có file ảnh được tải lên")
+
+    job_id = uuid.uuid4().hex[:8]
+    ext = ".png" if bg_mode == "transparent" else ".jpg"
+    final_filename = f"nobg_{job_id}{ext}"
+    final_output_path = OUTPUTS_DIR / final_filename
+
+    # Đọc ảnh từ upload
+    content = await file.read()
+    from PIL import Image
+    import io
+    image = Image.open(io.BytesIO(content))
+
+    try:
+        result_img = await asyncio.to_thread(
+            remove_background,
+            image,
+            bg_mode=bg_mode,
+            bg_color=bg_color,
+            blur_radius=blur_radius,
+            feather_radius=feather_radius
+        )
+        if bg_mode == "transparent":
+            result_img.save(final_output_path, format="PNG")
+        else:
+            result_img.save(final_output_path, format="JPEG", quality=95)
+
+        file_size = final_output_path.stat().st_size
+        return {
+            "success": True,
+            "job_id": job_id,
+            "filename": final_filename,
+            "width": result_img.width,
+            "height": result_img.height,
+            "bg_mode": bg_mode,
+            "download_url": f"/outputs/{final_filename}",
+            "size_human": f"{file_size / 1024:.1f} KB"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi tách nền: {str(e)}")
+
+# --- Colorization Endpoint ---
+@app.post("/api/colorize")
+async def colorize_endpoint(file: UploadFile = File(...)):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Chưa có file ảnh được tải lên")
+
+    job_id = uuid.uuid4().hex[:8]
+    final_filename = f"colorized_{job_id}.jpg"
+    final_output_path = OUTPUTS_DIR / final_filename
+
+    content = await file.read()
+    from PIL import Image
+    import io
+    image = Image.open(io.BytesIO(content))
+
+    try:
+        colorized_img = await asyncio.to_thread(colorizer.colorize_image, image)
+        colorized_img.save(final_output_path, format="JPEG", quality=95)
+
+        file_size = final_output_path.stat().st_size
+        return {
+            "success": True,
+            "job_id": job_id,
+            "filename": final_filename,
+            "width": colorized_img.width,
+            "height": colorized_img.height,
+            "download_url": f"/outputs/{final_filename}",
+            "size_human": f"{file_size / 1024:.1f} KB"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi tô màu ảnh: {str(e)}")
+
+# --- Video Super-Resolution Endpoints ---
+@app.post("/api/video/info")
+async def get_video_info_endpoint(file: UploadFile = File(...)):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Chưa có file video")
+
+    temp_video = UPLOADS_DIR / f"temp_{uuid.uuid4().hex[:8]}_{file.filename}"
+    with open(temp_video, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    try:
+        info = video_processor.get_video_info(temp_video)
+        return {"success": True, "info": info, "temp_path": temp_video.name}
+    except Exception as e:
+        if temp_video.exists():
+            temp_video.unlink()
+        raise HTTPException(status_code=500, detail=f"Lỗi khi đọc video: {str(e)}")
+
+@app.post("/api/video/upscale-stream")
+async def video_upscale_stream(
+    file: UploadFile = File(...),
+    scale: int = Form(2),
+    model: str = Form("realesr-animevideov3"),
+    tile_size: int = Form(100),
+    gpu_id: int = Form(0)
+):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Chưa có file video được tải lên")
+
+    ext = Path(file.filename).suffix or ".mp4"
+    safe_name = f"vid_{uuid.uuid4().hex[:8]}_{Path(file.filename).stem[:20]}{ext}"
+    input_video_path = UPLOADS_DIR / safe_name
+
+    try:
+        with open(input_video_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu video: {str(e)}")
+
+    async def event_generator():
+        queue: asyncio.Queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+
+        def progress_cb(percent: float, stage: str, message: str):
+            loop.call_soon_threadsafe(queue.put_nowait, {
+                "type": "progress",
+                "percent": percent,
+                "stage": stage,
+                "message": message
+            })
+
+        def run_worker():
+            try:
+                progress_cb(1.0, "init", "Bắt đầu tải video vào bộ nhớ xử lý...")
+                res = video_processor.process_video(
+                    input_video_path=input_video_path,
+                    scale=scale,
+                    model_name=model,
+                    tile_size=tile_size,
+                    gpu_id=gpu_id,
+                    progress_callback=progress_cb
+                )
+                loop.call_soon_threadsafe(queue.put_nowait, {
+                    "type": "complete",
+                    "data": res
+                })
+            except Exception as ex:
+                print(f"[Video Worker Exception] {ex}")
+                loop.call_soon_threadsafe(queue.put_nowait, {
+                    "type": "error",
+                    "error": str(ex)
+                })
+            finally:
+                loop.call_soon_threadsafe(queue.put_nowait, None)
+
+        threading.Thread(target=run_worker, daemon=True).start()
+
+        while True:
+            event = await queue.get()
+            if event is None:
+                break
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 # --- History & Storage Management Endpoints ---
 

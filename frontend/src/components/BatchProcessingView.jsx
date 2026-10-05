@@ -89,6 +89,8 @@ export default function BatchProcessingView({
       formData.append('detail_blend', settings.detail_blend ?? 0.40);
       formData.append('enhance_face', settings.enhance_face ?? false);
       formData.append('face_strength', settings.face_strength ?? 0.85);
+      formData.append('enable_clahe', settings.enable_clahe ?? false);
+      formData.append('enable_denoise', settings.enable_denoise ?? false);
       formData.append('output_format', settings.output_format || 'png');
       formData.append('gpu_id', 0);
 

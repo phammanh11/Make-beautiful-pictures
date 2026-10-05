@@ -546,35 +546,90 @@ export default function SettingsPanel({
                 100px: Tối ưu cho Intel Iris Xe • 200–400px: Cho card đồ họa rời (Nvidia/AMD)
               </span>
             </div>
+
+            {/* CLAHE & Denoise Toggles */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', paddingTop: '4px' }}>
+              <label 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: settings.enable_clahe ? 'rgba(6, 182, 212, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                  border: `1px solid ${settings.enable_clahe ? 'var(--accent-cyan)' : 'var(--border-subtle)'}`,
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  color: settings.enable_clahe ? 'var(--accent-cyan)' : 'var(--text-secondary)'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={settings.enable_clahe ?? false}
+                  onChange={(e) => onUpdateSettings({ enable_clahe: e.target.checked })}
+                  style={{ accentColor: 'var(--accent-cyan)' }}
+                />
+                <span>Tương phản CLAHE</span>
+              </label>
+
+              <label 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: settings.enable_denoise ? 'rgba(52, 211, 153, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                  border: `1px solid ${settings.enable_denoise ? 'var(--accent-emerald)' : 'var(--border-subtle)'}`,
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  color: settings.enable_denoise ? 'var(--accent-emerald)' : 'var(--text-secondary)'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={settings.enable_denoise ?? false}
+                  onChange={(e) => onUpdateSettings({ enable_denoise: e.target.checked })}
+                  style={{ accentColor: 'var(--accent-emerald)' }}
+                />
+                <span>Khử nhiễu ISO</span>
+              </label>
+            </div>
           </div>
         )}
 
         {/* Output Format */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#fff' }}>
-            Định dạng xuất
-          </span>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {['png', 'webp', 'jpg'].map((fmt) => (
-              <button
-                key={fmt}
-                type="button"
-                onClick={() => onUpdateSettings({ output_format: fmt })}
-                style={{
-                  background: settings.output_format === fmt ? 'rgba(0, 242, 254, 0.2)' : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${settings.output_format === fmt ? 'var(--accent-cyan)' : 'transparent'}`,
-                  color: settings.output_format === fmt ? '#00f2fe' : 'var(--text-secondary)',
-                  borderRadius: '6px',
-                  padding: '4px 10px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  cursor: 'pointer'
-                }}
-              >
-                {fmt}
-              </button>
-            ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#fff' }}>
+              Định dạng xuất
+            </span>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {['png', 'webp', 'jpg', 'tiff'].map((fmt) => (
+                <button
+                  key={fmt}
+                  type="button"
+                  onClick={() => onUpdateSettings({ output_format: fmt })}
+                  style={{
+                    background: settings.output_format === fmt ? 'rgba(0, 242, 254, 0.2)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${settings.output_format === fmt ? 'var(--accent-cyan)' : 'transparent'}`,
+                    color: settings.output_format === fmt ? '#00f2fe' : 'var(--text-secondary)',
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    fontSize: '0.73rem',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {fmt}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+            <span>✓ Tự động nhúng chuẩn in ấn <strong>300 DPI</strong></span>
+            <span>✓ Bảo tồn <strong>EXIF gốc</strong></span>
           </div>
         </div>
       </div>
