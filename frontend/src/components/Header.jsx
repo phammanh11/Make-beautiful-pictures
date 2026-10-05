@@ -114,7 +114,10 @@ export default function Header({
             }}
           >
             <Layers size={14} />
-            <span>Xử Lý Hàng Loạt (Batch)</span>
+            <span>Nhiều Ảnh (Batch)</span>
+            <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(0, 242, 254, 0.2)', color: '#00f2fe', fontWeight: 700 }}>
+              AUTO
+            </span>
           </button>
 
           <button
@@ -137,6 +140,9 @@ export default function Header({
           >
             <Film size={14} />
             <span>Studio Video AI (4K)</span>
+            <span style={{ fontSize: '0.62rem', padding: '1px 5px', borderRadius: '4px', background: 'rgba(251, 146, 60, 0.25)', color: '#fb923c', fontWeight: 700 }}>
+              MỚI
+            </span>
           </button>
         </div>
       )}

@@ -118,11 +118,20 @@ export default function App() {
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
-  const handleImageSelected = async (imgData) => {
+  const handleImageSelected = async (imgData, pendingFeature = null) => {
     setCurrentImage(imgData);
     setProcessResult(null);
     setErrorMsg(null);
     setDetectionResult(null);
+
+    // Mở ngay modal tính năng nếu người dùng chọn từ showcase card
+    if (pendingFeature === 'colorize') {
+      setIsColorizeOpen(true);
+    } else if (pendingFeature === 'bg_remover') {
+      setIsBgRemoverOpen(true);
+    } else if (pendingFeature === 'crop') {
+      setIsEditorOpen(true);
+    }
 
     // Tự động quét và nhận diện loại ảnh
     if (imgData && imgData.file && autoDetectEnabled) {
@@ -650,6 +659,7 @@ export default function App() {
                 onImageSelected={handleImageSelected}
                 currentImage={currentImage}
                 onSelectDemo={handleSelectDemo}
+                onSwitchTab={setActiveTab}
               />
             )}
           </div>
@@ -667,6 +677,24 @@ export default function App() {
               onToggleAutoDetect={() => setAutoDetectEnabled(!autoDetectEnabled)}
               isScanningImage={isScanningImage}
               detectionResult={detectionResult}
+              onOpenColorize={() => {
+                if (currentImage) setIsColorizeOpen(true);
+                else {
+                  alert('Vui lòng chọn hoặc kéo thả một ảnh trước khi mở bộ Tô Màu Cổ.');
+                }
+              }}
+              onOpenBgRemover={() => {
+                if (currentImage) setIsBgRemoverOpen(true);
+                else {
+                  alert('Vui lòng chọn hoặc kéo thả một ảnh trước khi mở bộ Tách Nền AI.');
+                }
+              }}
+              onOpenCrop={() => {
+                if (currentImage) setIsEditorOpen(true);
+                else {
+                  alert('Vui lòng chọn hoặc kéo thả một ảnh trước khi mở bộ Cắt Cúp & Cân Tỷ Lệ.');
+                }
+              }}
             />
           </div>
         </div>

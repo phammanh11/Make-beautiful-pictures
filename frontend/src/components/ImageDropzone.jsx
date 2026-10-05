@@ -1,9 +1,28 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, Image as ImageIcon, Sparkles, AlertCircle } from 'lucide-react';
+import { 
+  UploadCloud, 
+  Image as ImageIcon, 
+  Sparkles, 
+  Scissors, 
+  Palette, 
+  Crop, 
+  Film, 
+  Layers, 
+  ArrowRight,
+  ShieldCheck,
+  Zap
+} from 'lucide-react';
 
-export default function ImageDropzone({ onImageSelected, currentImage, onSelectDemo }) {
+export default function ImageDropzone({ 
+  onImageSelected, 
+  currentImage, 
+  onSelectDemo,
+  onOpenFeature,
+  onSwitchTab
+}) {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
+  const pendingFeatureRef = useRef(null);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -33,11 +52,13 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
     const isImage = file.type.startsWith('image/') || 
       /\.(jpg|jpeg|png|webp|heic|heif|tiff|tif|bmp|avif)$/i.test(file.name);
     if (!isImage) {
-      alert('Vui lòng chỉ chọn file hình ảnh (PNG, JPG, WEBP, HEIC, TIFF).');
+      alert('Vui lòng chỉ chọn file hình ảnh (PNG, JPG, WEBP, HEIC, TIFF, AVIF).');
       return;
     }
 
-    // Read image info
+    const featureToOpen = pendingFeatureRef.current;
+    pendingFeatureRef.current = null;
+
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
@@ -50,10 +71,9 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
           name: file.name,
           size: file.size,
           sizeHuman: formatBytes(file.size)
-        });
+        }, featureToOpen);
       };
       img.onerror = () => {
-        // Fallback for formats not natively rendered by browser (HEIC, TIFF)
         onImageSelected({
           file: file,
           previewUrl: e.target.result,
@@ -62,7 +82,7 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
           name: file.name,
           size: file.size,
           sizeHuman: formatBytes(file.size)
-        });
+        }, featureToOpen);
       };
       img.src = e.target.result;
     };
@@ -75,8 +95,77 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
     else return (bytes / 1048576).toFixed(2) + ' MB';
   };
 
+  const triggerFeature = (featureName) => {
+    if (featureName === 'video') {
+      if (onSwitchTab) onSwitchTab('video');
+      return;
+    }
+    if (featureName === 'batch') {
+      if (onSwitchTab) onSwitchTab('batch');
+      return;
+    }
+
+    pendingFeatureRef.current = featureName;
+    fileInputRef.current?.click();
+  };
+
+  const features = [
+    {
+      id: 'colorize',
+      title: 'Tô Màu Ảnh Cổ',
+      badge: 'MỚI CẬP NHẬT',
+      badgeColor: '#c084fc',
+      badgeBg: 'rgba(168, 85, 247, 0.2)',
+      desc: 'Phục hồi màu sắc sống động cho ảnh đen trắng xưa với 5 phong cách màu nghệ thuật.',
+      icon: Palette,
+      color: '#c084fc',
+      border: 'rgba(168, 85, 247, 0.4)',
+      bg: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(20, 20, 35, 0.7) 100%)',
+      btnText: 'Tô Màu Ngay'
+    },
+    {
+      id: 'bg_remover',
+      title: 'Tách Nền AI',
+      badge: 'AI REMOVE',
+      badgeColor: '#f472b6',
+      badgeBg: 'rgba(236, 72, 153, 0.2)',
+      desc: 'Tự động cắt chủ thể sắc nét từng sợi tóc, xuất file PNG trong suốt hoặc màu nền studio.',
+      icon: Scissors,
+      color: '#f472b6',
+      border: 'rgba(236, 72, 153, 0.4)',
+      bg: 'linear-gradient(135deg, rgba(236, 72, 153, 0.12) 0%, rgba(20, 20, 35, 0.7) 100%)',
+      btnText: 'Tách Nền Ngay'
+    },
+    {
+      id: 'crop',
+      title: 'Cắt Cúp & Cân Tỷ Lệ',
+      badge: 'STUDIO TOOL',
+      badgeColor: 'var(--accent-cyan)',
+      badgeBg: 'rgba(6, 182, 212, 0.2)',
+      desc: 'Xoay góc, lật ảnh và cắt theo tỷ lệ chuẩn 1:1, 4:3, 16:9 trước khi upscale.',
+      icon: Crop,
+      color: 'var(--accent-cyan)',
+      border: 'rgba(6, 182, 212, 0.4)',
+      bg: 'linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(20, 20, 35, 0.7) 100%)',
+      btnText: 'Cắt Ảnh Ngay'
+    },
+    {
+      id: 'video',
+      title: 'Studio Video AI 4K',
+      badge: 'GPU VULKAN',
+      badgeColor: '#fb923c',
+      badgeBg: 'rgba(251, 146, 60, 0.2)',
+      desc: 'Siêu phân giải video mờ lên 1080p / 4K 60FPS sắc nét, giảm 80% dung lượng đĩa tạm.',
+      icon: Film,
+      color: '#fb923c',
+      border: 'rgba(251, 146, 60, 0.4)',
+      bg: 'linear-gradient(135deg, rgba(251, 146, 60, 0.12) 0%, rgba(20, 20, 35, 0.7) 100%)',
+      btnText: 'Mở Video Studio'
+    }
+  ];
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
       <input
         type="file"
         ref={fileInputRef}
@@ -85,63 +174,71 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
         style={{ display: 'none' }}
       />
 
+      {/* Main Upload Dropzone */}
       <div
         className="glass-panel"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => {
+          pendingFeatureRef.current = null;
+          fileInputRef.current?.click();
+        }}
         style={{
-          border: `2px dashed ${isDragOver ? 'var(--accent-cyan)' : 'rgba(255, 255, 255, 0.15)'}`,
+          border: `2px dashed ${isDragOver ? 'var(--accent-cyan)' : 'rgba(0, 242, 254, 0.25)'}`,
           borderRadius: '16px',
-          padding: '40px 24px',
+          padding: '36px 24px',
           textAlign: 'center',
           cursor: 'pointer',
-          background: isDragOver ? 'rgba(0, 242, 254, 0.05)' : 'var(--bg-card)',
+          background: isDragOver ? 'rgba(0, 242, 254, 0.08)' : 'linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(10, 15, 29, 0.8) 100%)',
           transition: 'all 0.25s ease',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: '260px'
+          minHeight: '240px',
+          boxShadow: isDragOver ? '0 0 30px rgba(0, 242, 254, 0.25)' : 'none'
         }}
       >
         <div
           style={{
-            width: '64px',
-            height: '64px',
+            width: '60px',
+            height: '60px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.15) 0%, rgba(121, 40, 202, 0.15) 100%)',
-            border: '1px solid rgba(0, 242, 254, 0.3)',
+            background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.2) 0%, rgba(121, 40, 202, 0.2) 100%)',
+            border: '1px solid rgba(0, 242, 254, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '16px',
+            marginBottom: '14px',
             color: 'var(--accent-cyan)',
-            boxShadow: '0 0 24px rgba(0, 242, 254, 0.2)'
+            boxShadow: '0 0 24px rgba(0, 242, 254, 0.3)'
           }}
         >
-          <UploadCloud size={30} />
+          <UploadCloud size={28} />
         </div>
 
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '8px', color: '#fff' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '6px', color: '#fff' }}>
           Kéo thả ảnh cần nâng cấp vào đây
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '420px', lineHeight: '1.5', marginBottom: '16px' }}>
-          Hỗ trợ ảnh 480p, 720p, 1080p, ảnh mờ, vỡ hạt (JPG, PNG, WebP). Tự động khử nhiễu và tái tạo chi tiết 4K bằng AI.
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', maxWidth: '460px', lineHeight: '1.5', marginBottom: '14px' }}>
+          Hỗ trợ JPG, PNG, WebP, <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>iPhone HEIC/HEIF</span>, TIFF, AVIF.
+          Tự động phục hồi chi tiết, khử mờ và khử nhiễu bằng AI Vulkan.
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
             className="glow-btn"
             onClick={(e) => {
               e.stopPropagation();
+              pendingFeatureRef.current = null;
               fileInputRef.current?.click();
             }}
             style={{
-              padding: '10px 22px',
-              fontSize: '0.875rem'
+              padding: '10px 24px',
+              fontSize: '0.88rem',
+              fontWeight: 600
             }}
           >
             Chọn Ảnh Từ Máy Tính
@@ -152,7 +249,7 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              fontSize: '0.76rem',
+              fontSize: '0.74rem',
               color: 'var(--text-muted)',
               background: 'rgba(255, 255, 255, 0.04)',
               padding: '4px 10px',
@@ -175,48 +272,161 @@ export default function ImageDropzone({ onImageSelected, currentImage, onSelectD
             alignItems: 'center', 
             justifyContent: 'center', 
             gap: '12px',
-            padding: '8px 0' 
+            flexWrap: 'wrap',
+            padding: '2px 0' 
           }}
         >
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
             Hoặc thử nhanh ảnh mẫu:
           </span>
           <button
             onClick={() => onSelectDemo('photo')}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
+              background: 'rgba(255, 255, 255, 0.04)',
               border: '1px solid var(--border-subtle)',
               borderRadius: '8px',
-              padding: '6px 14px',
-              fontSize: '0.78rem',
+              padding: '5px 12px',
+              fontSize: '0.76rem',
               color: '#38bdf8',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              transition: 'all 0.2s ease'
             }}
           >
-            <Sparkles size={13} /> Ảnh mẫu Chân dung / Đời sống
+            <Sparkles size={13} /> Ảnh mẫu Chân dung (GFPGAN)
           </button>
           <button
             onClick={() => onSelectDemo('anime')}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
+              background: 'rgba(255, 255, 255, 0.04)',
               border: '1px solid var(--border-subtle)',
               borderRadius: '8px',
-              padding: '6px 14px',
-              fontSize: '0.78rem',
+              padding: '5px 12px',
+              fontSize: '0.76rem',
               color: '#c084fc',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              transition: 'all 0.2s ease'
             }}
           >
-            <ImageIcon size={13} /> Ảnh mẫu Anime / Manga 2D
+            <ImageIcon size={13} /> Ảnh mẫu Anime 2D
           </button>
         </div>
       )}
+
+      {/* AI CREATIVE SUITE SHOWCASE CARDS (LÀM NỔI BẬT TOÀN BỘ TÍNH NĂNG MỚI) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Zap size={16} color="var(--accent-cyan)" />
+            <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Bộ Công Cụ AI Sáng Tạo Nổi Bật
+            </h4>
+          </div>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            Nhấp vào bất kỳ công cụ nào để chọn ảnh và sử dụng ngay
+          </span>
+        </div>
+
+        <div 
+          style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+            gap: '12px' 
+          }}
+        >
+          {features.map((feat) => {
+            const Icon = feat.icon;
+            return (
+              <div
+                key={feat.id}
+                onClick={() => triggerFeature(feat.id)}
+                className="glass-panel"
+                style={{
+                  background: feat.bg,
+                  border: `1px solid ${feat.border}`,
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  transition: 'all 0.2s ease',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = `0 6px 20px ${feat.border}`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div 
+                    style={{ 
+                      width: '32px', 
+                      height: '32px', 
+                      borderRadius: '8px', 
+                      background: feat.badgeBg, 
+                      color: feat.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Icon size={18} />
+                  </div>
+                  <span 
+                    style={{ 
+                      fontSize: '0.65rem', 
+                      fontWeight: 700, 
+                      padding: '2px 8px', 
+                      borderRadius: '999px',
+                      background: feat.badgeBg,
+                      color: feat.badgeColor,
+                      border: `1px solid ${feat.border}`
+                    }}
+                  >
+                    {feat.badge}
+                  </span>
+                </div>
+
+                <div>
+                  <h5 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
+                    {feat.title}
+                  </h5>
+                  <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: '1.4', minHeight: '32px' }}>
+                    {feat.desc}
+                  </p>
+                </div>
+
+                <div 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '4px', 
+                    fontSize: '0.75rem', 
+                    fontWeight: 600, 
+                    color: feat.color,
+                    marginTop: 'auto',
+                    paddingTop: '6px'
+                  }}
+                >
+                  <span>{feat.btnText}</span>
+                  <ArrowRight size={13} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
