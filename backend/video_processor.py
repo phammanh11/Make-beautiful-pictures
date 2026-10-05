@@ -86,7 +86,7 @@ class VideoUpscaleProcessor:
 
         try:
             if cancel_checker and cancel_checker():
-                raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+                raise RuntimeError("Job was cancelled by user.")
 
             if progress_callback:
                 progress_callback(3.0, "init", "Đang phân tích thông số video...")
@@ -113,7 +113,7 @@ class VideoUpscaleProcessor:
                 has_audio = False
 
             if cancel_checker and cancel_checker():
-                raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+                raise RuntimeError("Job was cancelled by user.")
 
             # 2. Tách frames từ video
             if progress_callback:
@@ -132,7 +132,7 @@ class VideoUpscaleProcessor:
                 raise RuntimeError("Không thể trích xuất khung hình từ video.")
 
             if cancel_checker and cancel_checker():
-                raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+                raise RuntimeError("Job was cancelled by user.")
 
             # 3. Siêu phân giải hàng loạt frame bằng Real-ESRGAN Vulkan NCNN (Dùng JPG tối ưu I/O)
             if progress_callback:
@@ -168,7 +168,7 @@ class VideoUpscaleProcessor:
                 if cancel_checker and cancel_checker():
                     proc.terminate()
                     proc.kill()
-                    raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+                    raise RuntimeError("Job was cancelled by user.")
                 if not line:
                     break
                 m = pct_regex.search(line)
@@ -186,7 +186,7 @@ class VideoUpscaleProcessor:
                 raise RuntimeError(f"Vulkan NCNN engine exited with code {proc.returncode}")
 
             if cancel_checker and cancel_checker():
-                raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+                raise RuntimeError("Job was cancelled by user.")
 
             # 4. Ghép lại khung hình thành Video MP4 chất lượng cao
             if progress_callback:

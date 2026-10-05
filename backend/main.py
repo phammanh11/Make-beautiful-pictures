@@ -1,10 +1,32 @@
 import os
+import sys
 import shutil
 import uuid
 import asyncio
 import threading
 from pathlib import Path
 from typing import List, Optional, Dict, Any
+
+# Đảm bảo mã hóa console UTF-8 trên Windows tránh lỗi UnicodeEncodeError
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+def safe_log(msg: str):
+    try:
+        print(msg)
+    except Exception:
+        try:
+            print(msg.encode("ascii", errors="replace").decode("ascii"))
+        except Exception:
+            pass
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -358,7 +380,7 @@ async def upscale_image_stream(
                 })
             except Exception as ex:
                 is_canc = is_job_cancelled(job_id)
-                print(f"[Worker Status] {'Cancelled' if is_canc else 'Exception'}: {ex}")
+                safe_log(f"[Worker Status] {'Cancelled' if is_canc else 'Exception'}: {ex}")
                 loop.call_soon_threadsafe(queue.put_nowait, {
                     "type": "cancelled" if is_canc else "error",
                     "error": "Tác vụ đã được hủy theo yêu cầu." if is_canc else str(ex)
@@ -603,7 +625,7 @@ async def video_upscale_stream(
                 })
             except Exception as ex:
                 is_canc = is_job_cancelled(job_id)
-                print(f"[Video Worker Status] {'Cancelled' if is_canc else 'Exception'}: {ex}")
+                safe_log(f"[Video Worker Status] {'Cancelled' if is_canc else 'Exception'}: {ex}")
                 loop.call_soon_threadsafe(queue.put_nowait, {
                     "type": "cancelled" if is_canc else "error",
                     "error": "Tác vụ video đã được hủy theo yêu cầu." if is_canc else str(ex)

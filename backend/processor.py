@@ -240,7 +240,7 @@ class UpscaleProcessor:
                 if cancel_checker and cancel_checker():
                     proc.terminate()
                     proc.kill()
-                    raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+                    raise RuntimeError("Job was cancelled by user.")
                 if not line:
                     break
                 m = pct_regex.search(line)
@@ -258,7 +258,7 @@ class UpscaleProcessor:
                 raise RuntimeError(f"Vulkan GPU run exited with code {proc.returncode}")
         except Exception as e:
             if cancel_checker and cancel_checker():
-                raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+                raise RuntimeError("Job was cancelled by user.")
             print(f"[AI Upscaler] GPU run error ({e}). Falling back to CPU mode...")
             if progress_callback:
                 progress_callback(15.0, "ai_upscale", "Chuyển sang chế độ CPU đa luồng dự phòng...")
@@ -278,7 +278,7 @@ class UpscaleProcessor:
                 if cancel_checker and cancel_checker():
                     proc_cpu.terminate()
                     proc_cpu.kill()
-                    raise RuntimeError("Tác vụ đã được hủy bởi người dùng.")
+                    raise RuntimeError("Job was cancelled by user.")
                 if not line:
                     break
                 m = pct_regex.search(line)
