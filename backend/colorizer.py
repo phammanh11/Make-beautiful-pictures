@@ -45,6 +45,13 @@ class PhotoColorizer:
         else:
             img_bgr = img_input
 
+        if img_bgr is None:
+            raise ValueError("Không thể đọc ảnh đầu vào để tô màu.")
+
+        # Đảm bảo ảnh là BGR 3 kênh
+        if len(img_bgr.shape) == 2 or img_bgr.shape[2] == 1:
+            img_bgr = cv2.cvtColor(img_bgr, cv2.COLOR_GRAY2BGR)
+
         # Nếu model AI sẵn sàng, chạy deep learning
         if self.net is not None:
             try:
@@ -67,10 +74,16 @@ class PhotoColorizer:
             except Exception as e:
                 print(f"[Colorizer] DNN Error: {e}")
 
-        # Thuật toán tô màu phục chế thông minh tự nhiên (Natural Sepia/Warmth Chromatic Transfer)
+        # Thuật toán tô màu phục chế thông minh tự nhiên (Natural Vintage & Skin-Tone Chromatic Transfer)
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-        # Tạo bản đồ sắc thái tự nhiên (da người và bầu trời cổ điển)
-        color_bgr = cv2.applyColorMap(gray, cv2.COLORMAP_CIVIDIS)
-        warm_bgr = cv2.applyColorMap(gray, cv2.COLORMAP_TURBO)
-        blended = cv2.addWeighted(img_bgr, 0.5, warm_bgr, 0.5, 0)
-        return Image.fromarray(cv2.cvtColor(blended, cv2.COLOR_BGR2RGB))
+        gray_f = gray.astype(np.float32) / 255.0
+        # Bảo toàn 100% chi tiết độ sáng L, tái tạo sắc tố da người và màu ấm tự nhiên trong không gian LAB
+        L_chan = (gray_f * 255.0).astype(np.uint8)
+        # Kênh A (xanh lá - đỏ): tăng nhẹ sắc hồng tự nhiên ở dải sắc thái da người
+        A_chan = np.clip(128.0 + 10.0 * np.sin(np.pi * gray_f), 0, 255).astype(np.uint8)
+        # Kênh B (xanh dương - vàng): tăng sắc vàng ấm tự nhiên ở vùng sáng trung gian
+        B_chan = np.clip(128.0 + 26.0 * np.sin(np.pi * gray_f), 0, 255).astype(np.uint8)
+
+        lab_img = cv2.merge([L_chan, A_chan, B_chan])
+        vintage_bgr = cv2.cvtColor(lab_img, cv2.COLOR_LAB2BGR)
+        return Image.fromarray(cv2.cvtColor(vintage_bgr, cv2.COLOR_BGR2RGB))

@@ -58,10 +58,12 @@
 
 ## 🚀 Hướng Dẫn Sử Dụng 1-Click
 
-### Cách 1: Chạy nhanh bằng file run_app.bat
+### Cách 1: Chạy nhanh bằng file run_app.bat (Duy nhất 1 file 1-Click)
 Chỉ cần nhấp đúp chuột vào file **run_app.bat** ở thư mục gốc:
-- Script sẽ tự động bật FastAPI Backend và AI Engine.
-- Tự động mở trình duyệt web tại địa chỉ: http://127.0.0.1:8000.
+- Tự động kiểm tra Python, giải phóng cổng 8000 bị chiếm dụng.
+- Tự động biên dịch Frontend nếu chưa có thư mục `dist`.
+- Khởi động FastAPI Backend & AI Vulkan Engine.
+- Tự động mở giao diện ứng dụng dưới dạng cửa sổ Desktop độc lập (hoặc trình duyệt web) tại: http://127.0.0.1:8000.
 
 ### Cách 2: Chạy thủ công từ Terminal
 

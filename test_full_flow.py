@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import time
 from pathlib import Path
@@ -7,7 +7,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 from playwright.sync_api import sync_playwright
 
-artifact_dir = Path(r"C:\Users\Admin\.gemini\antigravity\brain\2a5ee812-fc12-451e-935c-c0e894e37ff9")
+artifact_dir = Path(__file__).parent / "test_output"
+artifact_dir.mkdir(parents=True, exist_ok=True)
 
 print("=== STARTING FULL E2E AUTOMATION TEST IN GOOGLE CHROME ===")
 with sync_playwright() as p:

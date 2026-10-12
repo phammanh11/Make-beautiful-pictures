@@ -119,6 +119,31 @@ if FRONTEND_DIST.exists():
         if ico.exists():
             return FileResponse(ico)
         return FileResponse(FRONTEND_DIST / "index.html")
+else:
+    from fastapi.responses import HTMLResponse
+    @app.get("/")
+    def serve_frontend_missing():
+        return HTMLResponse(
+            """<!DOCTYPE html>
+            <html lang="vi">
+            <head><meta charset="utf-8"><title>Tao Anh Dep - AI Studio</title>
+            <style>
+              body { font-family: system-ui, sans-serif; background: #0b0f19; color: #f3f4f6; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+              .card { background: #161e2e; padding: 2.5rem; border-radius: 1rem; border: 1px solid #374151; max-width: 540px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+              h1 { color: #38bdf8; margin-top: 0; }
+              code { background: #1f2937; padding: 0.2rem 0.5rem; border-radius: 0.25rem; color: #f472b6; font-family: monospace; }
+            </style>
+            </head>
+            <body>
+              <div class="card">
+                <h1>AI Media Studio</h1>
+                <p>Backend API đang hoạt động bình thường, nhưng thư mục giao diện <code>frontend/dist</code> chưa được biên dịch.</p>
+                <p>Vui lòng chạy file <code>run_app.bat</code> hoặc mở terminal gõ:</p>
+                <p><code>cd frontend && npm install && npm run build</code></p>
+                <p>Sau đó tải lại trang này (F5).</p>
+              </div>
+            </body></html>"""
+        )
 
 processor = UpscaleProcessor()
 history_mgr = HistoryManager()
@@ -144,12 +169,35 @@ def on_startup():
     if os.environ.get("NO_BROWSER") != "1":
         def _open():
             import time
+            import subprocess
             import webbrowser
-            time.sleep(0.8)
-            try:
-                webbrowser.open("http://127.0.0.1:8000")
-            except Exception as e:
-                print(f"[Browser Auto-Open] {e}")
+            time.sleep(1.0)
+            opened = False
+            # Trên Windows, ưu tiên mở cửa sổ Desktop App độc lập (Frameless) qua Edge hoặc Chrome
+            if sys.platform == "win32":
+                browser_candidates = [
+                    os.environ.get("ProgramFiles(x86)", "") + r"\Microsoft\Edge\Application\msedge.exe",
+                    os.environ.get("ProgramFiles", "") + r"\Microsoft\Edge\Application\msedge.exe",
+                    os.environ.get("ProgramFiles", "") + r"\Google\Chrome\Application\chrome.exe",
+                    os.environ.get("ProgramFiles(x86)", "") + r"\Google\Chrome\Application\chrome.exe",
+                    os.environ.get("LocalAppData", "") + r"\Google\Chrome\Application\chrome.exe",
+                    os.environ.get("LocalAppData", "") + r"\Microsoft\Edge\Application\msedge.exe",
+                ]
+                for b_path in browser_candidates:
+                    if b_path and os.path.exists(b_path):
+                        try:
+                            subprocess.Popen([b_path, "--app=http://127.0.0.1:8000", "--window-size=1440,920"])
+                            opened = True
+                            print(f"[Desktop App Launcher] Đã mở cửa sổ ứng dụng: {Path(b_path).name}")
+                            break
+                        except Exception:
+                            pass
+            if not opened:
+                try:
+                    webbrowser.open("http://127.0.0.1:8000")
+                    print("[Browser Auto-Open] Đã mở tab trình duyệt: http://127.0.0.1:8000")
+                except Exception as e:
+                    print(f"[Browser Auto-Open] {e}")
         threading.Thread(target=_open, daemon=True).start()
 
 @app.post("/api/jobs/{job_id}/cancel")

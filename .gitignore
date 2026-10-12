@@ -28,9 +28,15 @@ backend/engine/models/GFPGANv1.4.onnx
 
 # SQLite Database & Local Session Data
 backend/history.db
+backend/history.db-shm
+backend/history.db-wal
 *.db
+*.db-shm
+*.db-wal
 *.sqlite3
 
-# Temporary Scripts
+# Test artifacts & temporary screenshots
+test_output/
+test_render.png
 check_urls.py
 
