@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Header from './components/Header';
 import ImageDropzone from './components/ImageDropzone';
 import SettingsPanel from './components/SettingsPanel';
@@ -11,13 +11,29 @@ import ImageEditorModal from './components/ImageEditorModal';
 import VideoStudioView from './components/VideoStudioView';
 import BgRemoverModal from './components/BgRemoverModal';
 import ColorizeModal from './components/ColorizeModal';
-import { Sparkles, RefreshCw, Layers, CheckCircle, ClipboardCheck, Crop, Scissors, Palette, Film } from 'lucide-react';
+import { 
+  Sparkles, 
+  RefreshCw, 
+  Layers, 
+  CheckCircle, 
+  ClipboardCheck, 
+  Crop, 
+  Scissors, 
+  Palette, 
+  Film,
+  ArrowLeft,
+  Trash2,
+  FolderOpen,
+  Home,
+  ImagePlus
+} from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('single'); // 'single' | 'batch' | 'video'
   const [pasteToast, setPasteToast] = useState(false);
   const [systemInfo, setSystemInfo] = useState(null);
   const [currentImage, setCurrentImage] = useState(null);
+  const fileInputRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processResult, setProcessResult] = useState(null);
   const [history, setHistory] = useState([]);
@@ -116,6 +132,37 @@ export default function App() {
 
   const handleUpdateSettings = (newSettings) => {
     setSettings(prev => ({ ...prev, ...newSettings }));
+  };
+
+  const handleGoHome = () => {
+    setCurrentImage(null);
+    setProcessResult(null);
+    setDetectionResult(null);
+    setErrorMsg(null);
+    setActiveTab('single');
+  };
+
+  const handleReplaceFileChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        handleImageSelected({
+          file: file,
+          previewUrl: event.target.result,
+          width: img.width,
+          height: img.height,
+          name: file.name,
+          size: file.size,
+          sizeHuman: (file.size / 1024).toFixed(1) + ' KB'
+        });
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleImageSelected = async (imgData, pendingFeature = null) => {
@@ -401,6 +448,8 @@ export default function App() {
         historyCount={history.length}
         currentMode={activeTab}
         onChangeMode={setActiveTab}
+        onGoHome={handleGoHome}
+        hasActiveImage={!!currentImage || !!processResult}
       />
 
       {/* Toast Clipboard Paste Notification */}
@@ -493,6 +542,7 @@ export default function App() {
                   upscaledUrl={processResult.download_url}
                   originalInfo={processResult.input}
                   upscaledInfo={processResult.output}
+                  onReset={handleGoHome}
                   onDownload={() => {
                     const a = document.createElement('a');
                     a.href = processResult.download_url;
@@ -511,24 +561,24 @@ export default function App() {
                 />
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   <button
-                    onClick={() => {
-                      setCurrentImage(null);
-                      setProcessResult(null);
-                    }}
+                    onClick={handleGoHome}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid var(--border-subtle)',
-                      color: 'var(--text-secondary)',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.18)',
+                      color: '#ffffff',
                       borderRadius: '10px',
-                      padding: '8px 18px',
-                      fontSize: '0.85rem',
+                      padding: '9px 20px',
+                      fontSize: '0.86rem',
+                      fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px'
+                      gap: '8px',
+                      transition: 'all 0.2s ease'
                     }}
+                    className="btn-hover-glow"
                   >
-                    <RefreshCw size={14} /> Nâng cấp ảnh mới khác
+                    <ArrowLeft size={15} /> Quay lại Trang chủ / Nâng cấp ảnh khác
                   </button>
                 </div>
               </>
@@ -544,11 +594,128 @@ export default function App() {
                   gap: '16px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="badge-tag badge-cyan font-mono">ĐÃ CHỌN ẢNH ĐẦU VÀO</span>
-                    <span style={{ fontSize: '0.85rem', color: '#fff', fontWeight: 600 }}>{currentImage.name}</span>
+                {/* Row 1: Back to Home + File Name + Actions (Pick Another / Delete) */}
+                <div 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    flexWrap: 'wrap', 
+                    gap: '12px',
+                    paddingBottom: '12px',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                  }}
+                >
+                  {/* Left: Back to Home button & File Name */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={handleGoHome}
+                      title="Quay lại màn hình chính kéo thả ảnh"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.18)',
+                        color: '#ffffff',
+                        borderRadius: '10px',
+                        padding: '7px 14px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s ease'
+                      }}
+                      className="btn-hover-glow"
+                    >
+                      <ArrowLeft size={15} />
+                      <span>Quay lại Trang chủ</span>
+                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="badge-tag badge-cyan font-mono" style={{ fontSize: '0.72rem' }}>ẢNH ĐẦU VÀO</span>
+                      <span 
+                        title={currentImage.name}
+                        style={{ 
+                          fontSize: '0.88rem', 
+                          color: '#f8fafc', 
+                          fontWeight: 700, 
+                          maxWidth: '220px', 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis', 
+                          whiteSpace: 'nowrap' 
+                        }}
+                      >
+                        {currentImage.name}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Right: Pick Another Image & Clear/Delete Photo */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleReplaceFileChange} 
+                      accept="image/*" 
+                      style={{ display: 'none' }} 
+                    />
+                    
+                    <button
+                      onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                      title="Mở hộp thoại chọn ngay ảnh khác thay thế"
+                      style={{
+                        background: 'rgba(0, 242, 254, 0.12)',
+                        border: '1px solid rgba(0, 242, 254, 0.35)',
+                        color: '#00f2fe',
+                        borderRadius: '10px',
+                        padding: '7px 14px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s ease'
+                      }}
+                      className="btn-cyan-hover"
+                    >
+                      <FolderOpen size={15} />
+                      <span>Chọn ảnh khác</span>
+                    </button>
+
+                    <button
+                      onClick={handleGoHome}
+                      title="Xóa ảnh này và quay lại màn hình chọn ảnh"
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.14)',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        color: '#f87171',
+                        borderRadius: '10px',
+                        padding: '7px 14px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.2s ease'
+                      }}
+                      className="btn-danger-hover"
+                    >
+                      <Trash2 size={15} />
+                      <span>Xóa ảnh</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Row 2: Resolution Info & AI Tools */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    <span>Độ phân giải gốc: <strong style={{ color: '#fff' }}>{currentImage.width} × {currentImage.height} px</strong></span>
+                    <span>•</span>
+                    <span>Dung lượng: <strong style={{ color: '#fff' }}>{currentImage.sizeHuman}</strong></span>
+                  </div>
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                       onClick={() => setIsEditorOpen(true)}
@@ -557,7 +724,7 @@ export default function App() {
                         border: '1px solid var(--accent-cyan)',
                         color: 'var(--accent-cyan)',
                         borderRadius: '8px',
-                        padding: '5px 10px',
+                        padding: '6px 12px',
                         cursor: 'pointer',
                         fontSize: '0.78rem',
                         fontWeight: 600,
@@ -577,7 +744,7 @@ export default function App() {
                         border: '1px solid #ec4899',
                         color: '#f472b6',
                         borderRadius: '8px',
-                        padding: '5px 10px',
+                        padding: '6px 12px',
                         cursor: 'pointer',
                         fontSize: '0.78rem',
                         fontWeight: 600,
@@ -597,7 +764,7 @@ export default function App() {
                         border: '1px solid #a855f7',
                         color: '#c084fc',
                         borderRadius: '8px',
-                        padding: '5px 10px',
+                        padding: '6px 12px',
                         cursor: 'pointer',
                         fontSize: '0.78rem',
                         fontWeight: 600,
@@ -609,24 +776,13 @@ export default function App() {
                     >
                       <Palette size={13} /> Tô Màu Cổ
                     </button>
-
-                    <button
-                      onClick={() => setCurrentImage(null)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--text-muted)',
-                        cursor: 'pointer',
-                        fontSize: '0.78rem'
-                      }}
-                    >
-                      Thay đổi ảnh
-                    </button>
                   </div>
                 </div>
 
+                {/* Image Viewport with Floating Quick Actions */}
                 <div 
                   style={{
+                    position: 'relative',
                     width: '100%',
                     height: '460px',
                     background: '#04060a',
@@ -638,6 +794,66 @@ export default function App() {
                     border: '1px solid rgba(255,255,255,0.06)'
                   }}
                 >
+                  {/* Floating Direct Actions */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      zIndex: 10,
+                      background: 'rgba(10, 15, 29, 0.85)',
+                      backdropFilter: 'blur(10px)',
+                      padding: '4px 6px',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(255, 255, 255, 0.14)',
+                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)'
+                    }}
+                  >
+                    <button
+                      onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                      title="Chọn ảnh khác từ máy tính"
+                      style={{
+                        background: 'rgba(0, 242, 254, 0.15)',
+                        border: 'none',
+                        color: '#00f2fe',
+                        borderRadius: '6px',
+                        padding: '5px 9px',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontWeight: 600
+                      }}
+                      className="btn-cyan-hover"
+                    >
+                      <FolderOpen size={13} /> Đổi ảnh
+                    </button>
+                    <button
+                      onClick={handleGoHome}
+                      title="Xóa ảnh này và quay về trang chủ"
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.2)',
+                        border: 'none',
+                        color: '#f87171',
+                        borderRadius: '6px',
+                        padding: '5px 9px',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontWeight: 600
+                      }}
+                      className="btn-danger-hover"
+                    >
+                      <Trash2 size={13} /> Xóa ảnh
+                    </button>
+                  </div>
+
                   <img
                     src={currentImage.previewUrl}
                     alt="Preview input"
@@ -650,8 +866,8 @@ export default function App() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                  <span>Độ phân giải gốc: <strong style={{ color: '#fff' }}>{currentImage.width} × {currentImage.height} px</strong></span>
-                  <span>Dung lượng: <strong style={{ color: '#fff' }}>{currentImage.sizeHuman}</strong></span>
+                  <span>Trạng thái: <strong style={{ color: 'var(--accent-cyan)' }}>Sẵn sàng nâng cấp</strong></span>
+                  <span>Định dạng: <strong style={{ color: '#fff' }}>{currentImage.file?.type || 'image/jpeg'}</strong></span>
                 </div>
               </div>
             ) : (

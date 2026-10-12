@@ -1,12 +1,14 @@
 import React from 'react';
-import { Sparkles, Cpu, Layers, History, HelpCircle, Film } from 'lucide-react';
+import { Sparkles, Cpu, Layers, History, HelpCircle, Film, Home, ArrowLeft } from 'lucide-react';
 
 export default function Header({ 
   systemInfo, 
   onToggleHistory, 
   historyCount, 
   currentMode = 'single', 
-  onChangeMode 
+  onChangeMode,
+  onGoHome,
+  hasActiveImage
 }) {
   return (
     <header
@@ -25,7 +27,19 @@ export default function Header({
       }}
     >
       {/* Brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      <div 
+        onClick={onGoHome}
+        title="Quay lại Trang chủ / Tải ảnh mới"
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '14px',
+          cursor: onGoHome ? 'pointer' : 'default',
+          userSelect: 'none',
+          transition: 'transform 0.2s ease'
+        }}
+        className={onGoHome ? "brand-interactive" : ""}
+      >
         <div
           style={{
             width: '42px',
@@ -73,6 +87,32 @@ export default function Header({
             gap: '4px'
           }}
         >
+          {hasActiveImage && onGoHome && (
+            <button
+              onClick={onGoHome}
+              title="Xóa ảnh hiện tại và quay về màn hình chính chọn ảnh"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                background: 'rgba(239, 68, 68, 0.16)',
+                color: '#f87171',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                marginRight: '4px'
+              }}
+              className="btn-danger-hover"
+            >
+              <Home size={14} />
+              <span>Trang chủ (Xóa ảnh)</span>
+            </button>
+          )}
+
           <button
             onClick={() => onChangeMode('single')}
             style={{

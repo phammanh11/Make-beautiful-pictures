@@ -7,6 +7,7 @@ import {
   Sparkles, 
   MoveHorizontal,
   ArrowLeftRight,
+  ArrowLeft,
   Eye,
   Download,
   Copy,
@@ -22,7 +23,8 @@ export default function BeforeAfterSlider({
   upscaledUrl, 
   originalInfo, 
   upscaledInfo, 
-  onDownload 
+  onDownload,
+  onReset
 }) {
   const [sliderPos, setSliderPos] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
@@ -299,6 +301,32 @@ export default function BeforeAfterSlider({
       >
         {/* Left: View Modes */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          {onReset && (
+            <button
+              onClick={onReset}
+              title="Quay lại trang chủ và nâng cấp ảnh khác"
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                color: '#ffffff',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginRight: '6px',
+                transition: 'all 0.2s ease'
+              }}
+              className="btn-hover-glow"
+            >
+              <ArrowLeft size={14} />
+              <span>Quay lại Trang chủ</span>
+            </button>
+          )}
+
           <button
             onClick={() => setViewMode('split')}
             style={{
