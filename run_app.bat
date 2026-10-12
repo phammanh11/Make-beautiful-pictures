@@ -1,66 +1,59 @@
 @echo off
-chcp 65001 >nul
-title Tạo Ảnh Đẹp - AI Ultra Media Studio (Image & Video 4K)
+title Tao Anh Dep - AI Ultra Media Studio
 echo =================================================================
-echo   TAO ANH DEP - AI ULTRA MEDIA STUDIO (IMAGE & VIDEO 4K)
-echo   Hardware Acceleration: Intel Iris Xe via Vulkan & DirectML
+echo   TAO ANH DEP - AI ULTRA MEDIA STUDIO (IMAGE AND VIDEO 4K)
+echo   Hardware Acceleration: Intel Iris Xe via Vulkan and DirectML
 echo =================================================================
 echo.
 
-:: 1. Kiểm tra trình thông dịch Python
-set PYTHON_CMD=
+:: 1. Kiem tra trinh thong dich Python
+set PYTHON_CMD=py
 py --version >nul 2>&1
-if not errorlevel 1 (
-    set PYTHON_CMD=py
-) else (
+if errorlevel 1 (
+    set PYTHON_CMD=python
     python --version >nul 2>&1
-    if not errorlevel 1 (
-        set PYTHON_CMD=python
+    if errorlevel 1 (
+        echo [LOI] Khong tim thay Python tren he thong!
+        echo Vui long cai dat Python tu https://www.python.org hoac Microsoft Store.
+        pause
+        exit /b 1
     )
 )
 
-if "%PYTHON_CMD%"=="" (
-    echo [LỖI] Không tìm thấy Python trên hệ thống!
-    echo Vui lòng cài đặt Python (tối thiểu 3.10+) từ https://www.python.org hoặc Microsoft Store
-    echo và tích chọn "Add Python to PATH".
-    echo.
-    pause
-    exit /b 1
-)
+echo [*] Trinh thong dich Python: %PYTHON_CMD%
 
-:: 2. Kiểm tra và giải phóng cổng 8000 nếu có tiến trình cũ chiếm dụng
+:: 2. Giai phong cong 8000 neu co tien trinh cu chiem dung
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8000" ^| findstr "LISTENING"') do (
-    echo [*] Đang đóng tiến trình server cũ đang chiếm cổng 8000 (PID %%a)...
+    echo [*] Dang dong server cu dang chiem cong 8000 PID %%a ...
     taskkill /f /pid %%a >nul 2>&1
     ping 127.0.0.1 -n 2 >nul
 )
 
-:: 3. Kiểm tra bản build Frontend, tự động biên dịch nếu chưa có
+:: 3. Kiem tra thu muc frontend/dist, tu dong build neu chua co
 if not exist "%~dp0frontend\dist\index.html" (
-    echo [*] Chưa tìm thấy bản build giao diện (frontend/dist). Đang kiểm tra Node.js...
+    echo [*] Chua tim thay frontend/dist. Dang kiem tra Node.js...
     where npm >nul 2>&1
     if not errorlevel 1 (
-        echo [*] Đang tự động biên dịch giao diện Frontend...
+        echo [*] Dang tu dong bien dich Frontend bang npm...
         cd /d "%~dp0frontend"
         call npm install
         call npm run build
         cd /d "%~dp0"
     ) else (
-        echo [Cảnh báo] Chưa cài Node.js để build frontend.
-        echo Hệ thống sẽ phục vụ trang hướng dẫn tại cổng 8000.
+        echo [Canh bao] Chua co Node.js de build frontend.
     )
 )
 
-:: 4. Chuyển vào thư mục backend và khởi động FastAPI
+:: 4. Chuyen vao backend va khoi dong FastAPI
 cd /d "%~dp0backend"
-echo [*] Đang khởi động AI Engine và FastAPI Server...
-echo [*] Địa chỉ truy cập: http://127.0.0.1:8000
-echo [*] Cửa sổ ứng dụng Desktop sẽ tự động mở khi máy chủ sẵn sàng.
-echo [*] Nhấn Ctrl + C để dừng ứng dụng.
+echo [*] Dang khoi dong AI Engine va FastAPI Server...
+echo [*] Dia chi truy cap: http://127.0.0.1:8000
+echo [*] Cua so ung dung se tu dong bat len ngay khi may chu san sang.
+echo [*] Nhan Ctrl + C de dung ung dung.
 echo.
 
 %PYTHON_CMD% -m uvicorn main:app --host 127.0.0.1 --port 8000
 
 echo.
-echo [*] Máy chủ đã dừng.
+echo [*] May chu da dung.
 pause

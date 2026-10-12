@@ -1,57 +1,51 @@
 @echo off
-chcp 65001 >nul
-title Cài đặt thư viện - Tạo Ảnh Đẹp AI Studio
+title Cai dat thu vien - Tao Anh Dep AI Studio
 echo =================================================================
 echo   TAO ANH DEP - CAI DAT TOAN BO THU VIEN VA HE THONG
 echo =================================================================
 echo.
 
-:: 1. Xác định trình thông dịch Python
-set PYTHON_CMD=
+:: 1. Xac dinh trinh thong dich Python
+set PYTHON_CMD=py
 py --version >nul 2>&1
-if not errorlevel 1 (
-    set PYTHON_CMD=py
-) else (
+if errorlevel 1 (
+    set PYTHON_CMD=python
     python --version >nul 2>&1
-    if not errorlevel 1 (
-        set PYTHON_CMD=python
+    if errorlevel 1 (
+        echo [LOI] Khong tim thay Python tren he thong!
+        echo Vui long cai dat Python tu https://www.python.org hoac Microsoft Store.
+        pause
+        exit /b 1
     )
 )
 
-if "%PYTHON_CMD%"=="" (
-    echo [LỖI] Không tìm thấy Python trên hệ thống!
-    echo Vui lòng cài đặt Python (tối thiểu 3.10+) từ https://www.python.org hoặc Microsoft Store.
-    pause
-    exit /b 1
-)
-
-echo [*] Sử dụng trình thông dịch Python: %PYTHON_CMD%
+echo [*] Su dung trinh thong dich: %PYTHON_CMD%
 %PYTHON_CMD% --version
 echo.
 
-echo [*] Nâng cấp pip...
+echo [*] Nang cap pip...
 %PYTHON_CMD% -m pip install --upgrade pip
 
-echo [*] Cài đặt các thư viện AI & Backend từ backend/requirements.txt...
+echo [*] Cai dat cac thu vien tu backend/requirements.txt...
 %PYTHON_CMD% -m pip install -r "%~dp0backend\requirements.txt"
 
-:: 2. Kiểm tra Node.js & npm để build Frontend (nếu có)
+:: 2. Kiem tra Node.js va npm de build Frontend (neu co)
 echo.
-echo [*] Kiểm tra môi trường Node.js cho Frontend...
+echo [*] Kiem tra moi truong Node.js cho Frontend...
 where npm >nul 2>&1
 if not errorlevel 1 (
-    echo [*] Đang cài đặt thư viện npm và biên dịch giao diện Frontend...
+    echo [*] Dang cai dat thu vien npm va bien dich Frontend...
     cd /d "%~dp0frontend"
     call npm install
     call npm run build
     cd /d "%~dp0"
-    echo [OK] Đã hoàn tất cài đặt và build frontend!
+    echo [OK] Da hoan tat cai dat va build frontend!
 ) else (
-    echo [i] Node.js chưa được cài đặt. Nếu đã có sẵn thư mục frontend/dist, bạn vẫn sử dụng bình thường.
+    echo [i] Node.js chua duoc cai dat. Neu da co san frontend/dist, ban van su dung binh thuong.
 )
 
 echo.
 echo =================================================================
-echo [OK] Cài đặt hoàn tất! Bạn chỉ cần nhấp đúp file run_app.bat để bắt đầu.
+echo [OK] Cai dat hoan tat! Ban co the chay run_app.bat de bat dau.
 echo =================================================================
 pause
