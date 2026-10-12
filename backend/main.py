@@ -171,7 +171,17 @@ def on_startup():
             import time
             import subprocess
             import webbrowser
-            time.sleep(1.0)
+            import socket
+
+            # Đợi server thực sự lắng nghe trên cổng 8000 (tối đa 15 giây)
+            for _ in range(30):
+                try:
+                    with socket.create_connection(("127.0.0.1", 8000), timeout=0.5):
+                        break
+                except OSError:
+                    time.sleep(0.5)
+
+            time.sleep(0.5)
             opened = False
             # Trên Windows, ưu tiên mở cửa sổ Desktop App độc lập (Frameless) qua Edge hoặc Chrome
             if sys.platform == "win32":
