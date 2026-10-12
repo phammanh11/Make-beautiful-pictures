@@ -34,9 +34,18 @@ class PhotoColorizer:
                 print(f"[Colorizer] Init warning: {e}")
                 self.net = None
 
-    def colorize_image(self, img_input: Union[Path, str, Image.Image, np.ndarray]) -> Image.Image:
+    def colorize_image(
+        self, 
+        img_input: Union[Path, str, Image.Image, np.ndarray],
+        preset: str = "natural"
+    ) -> Image.Image:
         """
-        Tô màu ảnh đen trắng cổ điển thành ảnh màu sống động
+        Tô màu ảnh đen trắng cổ điển thành ảnh màu sống động với 5 phong cách màu nghệ thuật:
+        - 'natural': Tự nhiên & hài hòa
+        - 'vibrant': Sống động & rực rỡ
+        - 'vintage': Cổ kính hoài niệm (sepia film)
+        - 'warm': Ấm áp hoàng hôn (golden hour)
+        - 'cool': Thanh khiết & trầm dịu
         """
         if isinstance(img_input, (str, Path)):
             img_bgr = cv2.imread(str(img_input))
@@ -74,15 +83,33 @@ class PhotoColorizer:
             except Exception as e:
                 print(f"[Colorizer] DNN Error: {e}")
 
-        # Thuật toán tô màu phục chế thông minh tự nhiên (Natural Vintage & Skin-Tone Chromatic Transfer)
+        # Thuật toán tô màu phục chế thông minh tự nhiên theo phong cách chọn (LAB Chromatic Synthesis)
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
         gray_f = gray.astype(np.float32) / 255.0
-        # Bảo toàn 100% chi tiết độ sáng L, tái tạo sắc tố da người và màu ấm tự nhiên trong không gian LAB
         L_chan = (gray_f * 255.0).astype(np.uint8)
-        # Kênh A (xanh lá - đỏ): tăng nhẹ sắc hồng tự nhiên ở dải sắc thái da người
-        A_chan = np.clip(128.0 + 10.0 * np.sin(np.pi * gray_f), 0, 255).astype(np.uint8)
-        # Kênh B (xanh dương - vàng): tăng sắc vàng ấm tự nhiên ở vùng sáng trung gian
-        B_chan = np.clip(128.0 + 26.0 * np.sin(np.pi * gray_f), 0, 255).astype(np.uint8)
+        sin_mod = np.sin(np.pi * gray_f)
+
+        preset_key = str(preset).lower()
+        if preset_key == "vibrant":
+            # Tươi tắn, độ bão hòa cao
+            A_chan = np.clip(128.0 + 16.0 * sin_mod, 0, 255).astype(np.uint8)
+            B_chan = np.clip(128.0 + 34.0 * sin_mod, 0, 255).astype(np.uint8)
+        elif preset_key == "vintage":
+            # Tông sepia hoài niệm phim nhựa
+            A_chan = np.clip(128.0 + 14.0 * sin_mod, 0, 255).astype(np.uint8)
+            B_chan = np.clip(128.0 + 40.0 * sin_mod, 0, 255).astype(np.uint8)
+        elif preset_key == "warm":
+            # Golden hour hoàng hôn
+            A_chan = np.clip(128.0 + 12.0 * sin_mod, 0, 255).astype(np.uint8)
+            B_chan = np.clip(128.0 + 32.0 * sin_mod, 0, 255).astype(np.uint8)
+        elif preset_key == "cool":
+            # Thanh khiết trầm dịu, ánh ngọc
+            A_chan = np.clip(128.0 - 10.0 * sin_mod, 0, 255).astype(np.uint8)
+            B_chan = np.clip(128.0 + 8.0 * sin_mod, 0, 255).astype(np.uint8)
+        else: # natural
+            # Tự nhiên cân bằng hài hòa
+            A_chan = np.clip(128.0 + 10.0 * sin_mod, 0, 255).astype(np.uint8)
+            B_chan = np.clip(128.0 + 26.0 * sin_mod, 0, 255).astype(np.uint8)
 
         lab_img = cv2.merge([L_chan, A_chan, B_chan])
         vintage_bgr = cv2.cvtColor(lab_img, cv2.COLOR_LAB2BGR)

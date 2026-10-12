@@ -187,7 +187,7 @@ export default function ImageDropzone({
         style={{
           border: `2px dashed ${isDragOver ? 'var(--accent-cyan)' : 'rgba(0, 242, 254, 0.25)'}`,
           borderRadius: '16px',
-          padding: '36px 24px',
+          padding: '28px 20px',
           textAlign: 'center',
           cursor: 'pointer',
           background: isDragOver ? 'rgba(0, 242, 254, 0.08)' : 'linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(10, 15, 29, 0.8) 100%)',
@@ -196,32 +196,32 @@ export default function ImageDropzone({
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: '240px',
+          minHeight: '200px',
           boxShadow: isDragOver ? '0 0 30px rgba(0, 242, 254, 0.25)' : 'none'
         }}
       >
         <div
           style={{
-            width: '60px',
-            height: '60px',
+            width: '54px',
+            height: '54px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, rgba(0, 242, 254, 0.2) 0%, rgba(121, 40, 202, 0.2) 100%)',
             border: '1px solid rgba(0, 242, 254, 0.4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '14px',
+            marginBottom: '12px',
             color: 'var(--accent-cyan)',
-            boxShadow: '0 0 24px rgba(0, 242, 254, 0.3)'
+            boxShadow: '0 0 20px rgba(0, 242, 254, 0.3)'
           }}
         >
-          <UploadCloud size={28} />
+          <UploadCloud size={26} />
         </div>
 
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '6px', color: '#fff' }}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '6px', color: '#fff' }}>
           Kéo thả ảnh cần nâng cấp vào đây
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', maxWidth: '460px', lineHeight: '1.5', marginBottom: '14px' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.84rem', maxWidth: '460px', lineHeight: '1.45', marginBottom: '12px' }}>
           Hỗ trợ JPG, PNG, WebP, <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>iPhone HEIC/HEIF</span>, TIFF, AVIF.
           Tự động phục hồi chi tiết, khử mờ và khử nhiễu bằng AI Vulkan.
         </p>
@@ -236,8 +236,8 @@ export default function ImageDropzone({
               fileInputRef.current?.click();
             }}
             style={{
-              padding: '10px 24px',
-              fontSize: '0.88rem',
+              padding: '9px 22px',
+              fontSize: '0.86rem',
               fontWeight: 600
             }}
           >
@@ -319,24 +319,24 @@ export default function ImageDropzone({
       )}
 
       {/* AI CREATIVE SUITE SHOWCASE CARDS (LÀM NỔI BẬT TOÀN BỘ TÍNH NĂNG MỚI) */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '2px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Zap size={16} color="var(--accent-cyan)" />
-            <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <Zap size={15} color="var(--accent-cyan)" />
+            <h4 style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Bộ Công Cụ AI Sáng Tạo Nổi Bật
             </h4>
           </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            Nhấp vào bất kỳ công cụ nào để chọn ảnh và sử dụng ngay
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+            Nhấp công cụ để chọn ảnh & mở ngay
           </span>
         </div>
 
         <div 
           style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-            gap: '12px' 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
+            gap: '10px' 
           }}
         >
           {features.map((feat) => {
@@ -350,11 +350,11 @@ export default function ImageDropzone({
                   background: feat.bg,
                   border: `1px solid ${feat.border}`,
                   borderRadius: '12px',
-                  padding: '14px 16px',
+                  padding: '12px 14px',
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px',
+                  gap: '8px',
                   transition: 'all 0.2s ease',
                   position: 'relative',
                   overflow: 'hidden'
@@ -371,9 +371,9 @@ export default function ImageDropzone({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div 
                     style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      borderRadius: '8px', 
+                      width: '28px', 
+                      height: '28px', 
+                      borderRadius: '7px', 
                       background: feat.badgeBg, 
                       color: feat.color,
                       display: 'flex',
@@ -381,13 +381,13 @@ export default function ImageDropzone({
                       justifyContent: 'center'
                     }}
                   >
-                    <Icon size={18} />
+                    <Icon size={16} />
                   </div>
                   <span 
                     style={{ 
-                      fontSize: '0.65rem', 
+                      fontSize: '0.62rem', 
                       fontWeight: 700, 
-                      padding: '2px 8px', 
+                      padding: '2px 6px', 
                       borderRadius: '999px',
                       background: feat.badgeBg,
                       color: feat.badgeColor,
@@ -399,10 +399,10 @@ export default function ImageDropzone({
                 </div>
 
                 <div>
-                  <h5 style={{ fontSize: '0.92rem', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>
+                  <h5 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', marginBottom: '3px' }}>
                     {feat.title}
                   </h5>
-                  <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: '1.4', minHeight: '32px' }}>
+                  <p style={{ fontSize: '0.71rem', color: 'var(--text-secondary)', lineHeight: '1.35', minHeight: '28px' }}>
                     {feat.desc}
                   </p>
                 </div>
@@ -412,15 +412,15 @@ export default function ImageDropzone({
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '4px', 
-                    fontSize: '0.75rem', 
+                    fontSize: '0.72rem', 
                     fontWeight: 600, 
                     color: feat.color,
                     marginTop: 'auto',
-                    paddingTop: '6px'
+                    paddingTop: '4px'
                   }}
                 >
                   <span>{feat.btnText}</span>
-                  <ArrowRight size={13} />
+                  <ArrowRight size={12} />
                 </div>
               </div>
             );

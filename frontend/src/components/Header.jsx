@@ -15,13 +15,13 @@ export default function Header({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '16px 28px',
+        padding: '12px 22px',
         borderRadius: '16px',
         width: '100%',
-        marginBottom: '24px',
+        marginBottom: '16px',
         border: '1px solid var(--border-subtle)',
         flexWrap: 'wrap',
-        gap: '16px'
+        gap: '14px'
       }}
     >
       {/* Brand */}

@@ -393,7 +393,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '24px 20px 60px 20px' }}>
+    <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '16px 20px 40px 20px' }}>
       {/* Top Navigation */}
       <Header
         systemInfo={systemInfo}

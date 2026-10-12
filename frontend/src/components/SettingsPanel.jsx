@@ -104,10 +104,12 @@ export default function SettingsPanel({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
-        padding: '24px',
+        gap: '16px',
+        padding: '20px',
         borderRadius: '16px',
-        width: '100%'
+        width: '100%',
+        maxHeight: 'calc(100vh - 100px)',
+        overflowY: 'auto'
       }}
     >
       {/* 1. Target Resolution */}
@@ -640,122 +642,6 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      {/* 4. Công Cụ AI Sáng Tạo Đi Kèm */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            4. Bộ Công Cụ Sáng Tạo AI
-          </label>
-          <span style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)', fontWeight: 600 }}>
-            Tích Hợp Sẵn
-          </span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-          <button
-            type="button"
-            onClick={() => {
-              if (onOpenColorize) onOpenColorize();
-            }}
-            style={{
-              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(20, 20, 35, 0.5) 100%)',
-              border: '1px solid rgba(168, 85, 247, 0.35)',
-              borderRadius: '10px',
-              padding: '10px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              color: '#fff',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#c084fc'}
-            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.35)'}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.25)', color: '#c084fc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Palette size={16} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff' }}>Tô Màu Ảnh Cổ Điển</span>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>5 preset phong cách màu cho ảnh đen trắng</span>
-              </div>
-            </div>
-            <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(168, 85, 247, 0.3)', color: '#e9d5ff', fontWeight: 700 }}>
-              MỚI
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (onOpenBgRemover) onOpenBgRemover();
-            }}
-            style={{
-              background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.15) 0%, rgba(20, 20, 35, 0.5) 100%)',
-              border: '1px solid rgba(236, 72, 153, 0.35)',
-              borderRadius: '10px',
-              padding: '10px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              color: '#fff',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#f472b6'}
-            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.35)'}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(236, 72, 153, 0.25)', color: '#f472b6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Scissors size={16} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff' }}>Tách Nền Chân Dung AI</span>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Cắt viền tóc mượt, phông trong suốt hoặc màu studio</span>
-              </div>
-            </div>
-            <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(236, 72, 153, 0.3)', color: '#fbcfe8', fontWeight: 700 }}>
-              AI PRO
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (onOpenCrop) onOpenCrop();
-            }}
-            style={{
-              background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(20, 20, 35, 0.5) 100%)',
-              border: '1px solid rgba(6, 182, 212, 0.35)',
-              borderRadius: '10px',
-              padding: '10px 14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-              color: '#fff',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
-            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.35)'}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'rgba(6, 182, 212, 0.25)', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Crop size={16} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff' }}>Cắt Cúp & Cân Tỷ Lệ Chuẩn</span>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>1:1, 4:3, 16:9, xoay góc & lật gương</span>
-              </div>
-            </div>
-            <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(6, 182, 212, 0.3)', color: '#cffafe', fontWeight: 700 }}>
-              STUDIO
-            </span>
-          </button>
-        </div>
-      </div>
-
       {/* Target Preview Box */}
       {currentImage && (
         <div 
@@ -784,7 +670,7 @@ export default function SettingsPanel({
         </div>
       )}
 
-      {/* Action Button */}
+      {/* Primary Action Button (Luôn nhìn thấy ngay trên màn hình) */}
       <button
         type="button"
         className="glow-btn"
@@ -792,8 +678,8 @@ export default function SettingsPanel({
         disabled={!currentImage || isProcessing}
         style={{
           width: '100%',
-          padding: '14px',
-          fontSize: '0.95rem',
+          padding: '13px',
+          fontSize: '0.92rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -805,6 +691,101 @@ export default function SettingsPanel({
         {isProcessing ? 'ĐANG XỬ LÝ AI SIÊU PHÂN GIẢI...' : 'BẮT ĐẦU NÂNG CẤP HÌNH ẢNH'}
       </button>
 
+      {/* 4. Bộ Công Cụ Sáng Tạo AI (Nổi bật, gọn gàng 3 cột) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            4. Công Cụ Sáng Tạo Nhanh
+          </label>
+          <span style={{ fontSize: '0.68rem', color: 'var(--accent-cyan)', fontWeight: 600 }}>
+            Tích Hợp Sẵn
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenColorize) onOpenColorize();
+            }}
+            title="Tô Màu Ảnh Đen Trắng Cổ Điển"
+            style={{
+              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(20, 20, 35, 0.5) 100%)',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              borderRadius: '8px',
+              padding: '8px 6px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              cursor: 'pointer',
+              color: '#fff',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#c084fc'}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(168, 85, 247, 0.3)'}
+          >
+            <Palette size={15} color="#c084fc" />
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Tô Màu Cổ</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenBgRemover) onOpenBgRemover();
+            }}
+            title="Tách Nền Chân Dung / Sản Phẩm AI"
+            style={{
+              background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.12) 0%, rgba(20, 20, 35, 0.5) 100%)',
+              border: '1px solid rgba(236, 72, 153, 0.3)',
+              borderRadius: '8px',
+              padding: '8px 6px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              cursor: 'pointer',
+              color: '#fff',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#f472b6'}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.3)'}
+          >
+            <Scissors size={15} color="#f472b6" />
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Tách Nền</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenCrop) onOpenCrop();
+            }}
+            title="Cắt Cúp & Cân Tỷ Lệ Chuẩn (1:1, 4:3, 16:9)"
+            style={{
+              background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.12) 0%, rgba(20, 20, 35, 0.5) 100%)',
+              border: '1px solid rgba(6, 182, 212, 0.3)',
+              borderRadius: '8px',
+              padding: '8px 6px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              cursor: 'pointer',
+              color: '#fff',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-cyan)'}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.3)'}
+          >
+            <Crop size={15} color="var(--accent-cyan)" />
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Cắt Cúp</span>
+          </button>
+        </div>
+      </div>
+
       {/* Hardware Status Footer */}
       <div 
         style={{
@@ -813,7 +794,7 @@ export default function SettingsPanel({
           justifyContent: 'space-between',
           fontSize: '0.72rem',
           color: 'var(--text-muted)',
-          paddingTop: '8px',
+          paddingTop: '6px',
           borderTop: '1px solid var(--border-subtle)'
         }}
       >
@@ -821,7 +802,7 @@ export default function SettingsPanel({
           <span className="pulse-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></span>
           <span>GPU: Intel Iris Xe (Vulkan & DirectML)</span>
         </div>
-        <span className="font-mono">Tiling {settings.tile_size ?? 100}px • GFPGAN Active</span>
+        <span className="font-mono">Tiling {settings.tile_size ?? 100}px • GFPGAN</span>
       </div>
     </div>
   );

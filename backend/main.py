@@ -568,7 +568,10 @@ async def remove_background_endpoint(
 
 # --- Colorization Endpoint ---
 @app.post("/api/colorize")
-async def colorize_endpoint(file: UploadFile = File(...)):
+async def colorize_endpoint(
+    file: UploadFile = File(...),
+    preset: str = Form("natural")
+):
     if not file.filename:
         raise HTTPException(status_code=400, detail="Chưa có file ảnh được tải lên")
 
@@ -582,7 +585,7 @@ async def colorize_endpoint(file: UploadFile = File(...)):
     image = Image.open(io.BytesIO(content))
 
     try:
-        colorized_img = await asyncio.to_thread(colorizer.colorize_image, image)
+        colorized_img = await asyncio.to_thread(colorizer.colorize_image, image, preset=preset)
         colorized_img.save(final_output_path, format="JPEG", quality=95)
 
         file_size = final_output_path.stat().st_size
